@@ -1,4 +1,4 @@
-// tagui csv_iterator.tag in/search.csv
+// tagui case_3.tag in/search.csv
 
 searchInputXPath = '//*[@id="cb1-edit"]'
 searchBtnXPath = '//button[@type="submit"]'
@@ -24,6 +24,6 @@ type `searchInputXPath` as [clear]`search text`
 click `searchBtnXPath`
 
 // Wait for search results to load
-wait 5
+wait 3
 
 tagui handle_result.tag
