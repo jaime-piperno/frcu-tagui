@@ -8,10 +8,12 @@ The main goal of this repository is to introduce students to process automation 
 
 ## 📖 Documentation & Resources
 
-- Official TagUI site: [https://aisingapore.org/aiproducts/tagui/](https://aisingapore.org/aiproducts/tagui/)  
+- Official TagUI site: [https://aisingapore.org/aiproducts/tagui/](https://aisingapore.org/aiproducts/tagui/)
+- TagUI repo: https://github.com/aisingapore/TagUI
 - Reference documentation: [https://tagui.readthedocs.io/en/latest/index.html](https://tagui.readthedocs.io/en/latest/index.html)  
 - Useful mouse position tracking tool: [https://bluegrams.com/mpos/](https://bluegrams.com/mpos/)
-- Basic tutorial videos (YouTube playlist): [Link](https://www.youtube.com/watch?v=1JRuSZNBBUk&list=PL2gs9_mNDDvZSCPsJu4APZR6AaDzUY7R6)  
+- Basic tutorial videos (YouTube playlist): [Link](https://www.youtube.com/watch?v=1JRuSZNBBUk&list=PL2gs9_mNDDvZSCPsJu4APZR6AaDzUY7R6)
+- Promising but not tested TagUI scripts editor tool: https://github.com/adegard/tagui_scripts
 
 ---
 
