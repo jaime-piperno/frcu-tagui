@@ -1,4 +1,4 @@
-// tagui case_3.tag in/search.csv
+// tagui sample_3.tag in/search.csv
 
 searchInputXPath = '//*[@id="cb1-edit"]'
 searchBtnXPath = '//button[@type="submit"]'
