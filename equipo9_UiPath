@@ -1,0 +1,42 @@
+# 🚀 UTN FRCU – Tecnologías para la Automatización 2025
+
+## 👥 Team
+**Team number:** 9  
+
+**Members:**  
+- Gregoraschuk Lautaro  
+- Galarraga Tadeo  
+- Alú Gerónimo  
+- Urdizard Martín  
+
+## 🤖 Bot Description
+**Description:**  
+Automation tool for extracting data from a web table, storing it in Excel, converting it to PDF, and sending it via WhatsApp to a specific chat.  
+
+**Technology used:**  
+- UiPath  
+
+## 📂 Project Structure
+- `Main.xaml` → Core automation workflow  
+- `ExcelHandling.xaml` → Handles Excel export  
+- `PDFConverter.xaml` → Converts Excel to PDF  
+- `WhatsAppSender.xaml` → Sends file via WhatsApp  
+
+## ⚙️ How It Works
+1. Extract data from a **web table**.  
+2. Save it into an **Excel file**.  
+3. Convert the Excel into a **PDF document**.  
+4. Send the PDF automatically through **WhatsApp**.  
+
+## 🎯 Objectives
+- Automate repetitive tasks.  
+- Reduce manual work and errors.  
+- Improve productivity using **RPA (Robotic Process Automation)** with UiPath.  
+
+## 📌 Requirements
+- UiPath Studio installed.  
+- WhatsApp Desktop or Web.  
+- Excel installed.  
+
+---
+✍️ *Project developed by Team 9 – UTN FRCU 2025*
