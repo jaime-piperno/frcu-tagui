@@ -26,7 +26,8 @@ UiPath, Telegram BOT API
 
 - Modify the Telegram username, password, and Chat ID to match your own user.
  <img width="294" height="306" alt="image" src="https://github.com/user-attachments/assets/b34e91a1-3510-402f-a567-ed215583f10d" />
- <img width="502" height="318" alt="image" src="https://github.com/user-attachments/assets/842a3ec2-50b2-4cd8-b44e-c0009e2da607" />
+ <img width="507" height="647" alt="image" src="https://github.com/user-attachments/assets/f48b3d58-de25-4fb9-a403-dc047c21f1bd" />
+
 
 - Start the Telegram bot @Grupo13TpABot.
 
