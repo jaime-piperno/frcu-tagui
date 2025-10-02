@@ -1,0 +1,24 @@
+{
+  "name": "cypress-qa",
+  "version": "1.0.0",
+<<<<<<< HEAD
+  "description": "",
+=======
+>>>>>>> 756fb1dbf89053bad341dfa7876d98ff89e0a643
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+<<<<<<< HEAD
+  "type": "commonjs",
+  "dependencies": {
+=======
+  "description": "",
+  "devDependencies": {
+>>>>>>> 756fb1dbf89053bad341dfa7876d98ff89e0a643
+    "cypress": "^15.2.0"
+  }
+}
