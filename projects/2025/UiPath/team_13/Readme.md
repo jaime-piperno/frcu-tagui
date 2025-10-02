@@ -3,9 +3,9 @@
 ## 👥 Team
 - **Team number:** 13
 - **Members:**
-  - Alurralde Nicolás
-  - Collazo Fiorotto Juan Ignacio
-  - Ferrari Joaquín
+  - Alurralde, Nicolás
+  - Collazo Fiorotto, Juan Ignacio
+  - Ferrari, Joaquín
 
 ---
 
