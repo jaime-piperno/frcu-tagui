@@ -19,20 +19,20 @@ UiPath, Telegram BOT API
 
 ## 🛠️ Usage Instructions
 
-Create an account on UiPath.com
-Install UiPath Studio locally on your computer.
-Complete the installation process following the on-screen instructions.
-Open the projects from the main project file.
+- Create an account on UiPath.com
+- Install UiPath Studio locally on your computer.
+- Complete the installation process following the on-screen instructions.
+- Open the projects from the main project file.
 
-Modify the Telegram username, password, and Chat ID to match your own user.
-<img width="294" height="306" alt="image" src="https://github.com/user-attachments/assets/b34e91a1-3510-402f-a567-ed215583f10d" />
-<img width="502" height="318" alt="image" src="https://github.com/user-attachments/assets/842a3ec2-50b2-4cd8-b44e-c0009e2da607" />
+- Modify the Telegram username, password, and Chat ID to match your own user.
+- <img width="294" height="306" alt="image" src="https://github.com/user-attachments/assets/b34e91a1-3510-402f-a567-ed215583f10d" />
+- <img width="502" height="318" alt="image" src="https://github.com/user-attachments/assets/842a3ec2-50b2-4cd8-b44e-c0009e2da607" />
 
-Start the Telegram bot @Grupo13TpABot.
+- Start the Telegram bot @Grupo13TpABot.
 
-Compile and run the project.
+- Compile and run the project.
 
-If there are available appointments, the bot will send a Telegram message notifying you.
+- If there are available appointments, the bot will send a Telegram message notifying you.
 
 ---
 
