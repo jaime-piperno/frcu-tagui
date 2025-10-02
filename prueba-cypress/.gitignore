@@ -1,0 +1,33 @@
+# -------------------------
+# Node.js
+# -------------------------
+node_modules/               # dependencias locales (se regeneran con npm install)
+npm-debug.log*              # logs de error de npm
+yarn-debug.log*             # logs de error de yarn
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------
+# Cypress
+# -------------------------
+cypress/screenshots/        # capturas generadas por Cypress
+cypress/videos/             # grabaciones de tests
+cypress/downloads/          # descargas simuladas en tests
+
+# -------------------------
+# Sistema operativo
+# -------------------------
+.DS_Store                   # macOS
+Thumbs.db                   # Windows
+
+# -------------------------
+# IDEs y entornos
+# -------------------------
+.vscode/                    # configuración local de VS Code
+.idea/                      # configuración de JetBrains (WebStorm, etc.)
+*.swp                       # archivos temporales de Vim
+
+# -------------------------
+# Otros
+# -------------------------
+.env                        # variables de entorno locales (ej: Cypress Cloud key)
