@@ -1,4 +1,4 @@
-# 📌 UTN FRCU – Tecnologías para la Automatización [year]
+# 📌 UTN FRCU – Tecnologías para la Automatización 2025
 
 ## 👥 Team
 - **Team number:** 13
