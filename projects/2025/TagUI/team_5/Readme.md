@@ -60,19 +60,26 @@ Steps to install TagUI:
 The summary will reach the spam section of your email and have an equal format to this:
 
 Resumen Diario
+
 Fuente Weather
+
 Clima: 19° - Despejado
 
 ---------------------------------------------------------------------------------------
 Noticias:
+
 Fuente BBC Mundo
+
 - Qué es un "swap" de monedas como el que negocia Argentina con el gobierno de Trump (y las dudas que genera)
 - "Ninguna de nosotras pidió jamás un trato especial": veteranas del ejército de EE.UU. responden al polémico discurso del secretario de Defensa sobre la masculinidad
 - Israel detiene a los activistas de la flotilla de ayuda humanitaria que intentaba llegar a Gaza y asegura que los deportará
 ---------------------------------------------------------------------------------------
 Dólar Blue:
+
 Fuente Dolar Hoy
+
 Valor Compra: $1430
+
 Valor Venta: $1450
 
 ---
