@@ -1,0 +1,6 @@
+{
+  "Name": "monitoreo prueba personal",
+  "ProjectType": "Process",
+  "Description": "Proceso en blanco",
+  "MainFile": "Main.xaml"
+}
