@@ -5,7 +5,7 @@ from datetime import datetime
 #SG_API_KEY = os.getenv("SG_API_KEY")  # Cargar API key antes de correr!!
 SG_API_KEY = "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"
 FROM_EMAIL = "lucasbrejoaco@gmail.com"
-TO_EMAILS  = ["gonvasch@gmail.com"]
+TO_EMAILS  = [""]
 SUBJECT    = f"Resumen Diario - {datetime.now().strftime('%Y-%m-%d')}"
 RESUMEN_PATH = "resumen.txt"
 
