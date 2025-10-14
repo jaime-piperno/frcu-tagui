@@ -1,0 +1,7 @@
+xpath, category
+//*[@id="cs.SE"], "Software Engineering"
+//*[@id="cs.CE"], "Engineering, Finance, and Science"
+//*[@id="cs.AI"], "Artificial Intelligence"
+//*[@id="cs.LG"], "Machine Learning"
+
+
