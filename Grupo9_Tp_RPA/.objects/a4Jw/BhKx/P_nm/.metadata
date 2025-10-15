@@ -1,0 +1,13 @@
+﻿{
+  "Name": "Chrome tabla de futbol argentino - Buscar con",
+  "Type": "Screen",
+  "Id": "P_nmLVCruEeS53eSCAh-bQ",
+  "Reference": "XNGUabLDu0utwZoITPvUAQ/P_nmLVCruEeS53eSCAh-bQ",
+  "ParentRef": "XNGUabLDu0utwZoITPvUAQ/BhKxZ6WDxEGJFCDXv8ZvUg",
+  "Created": "2025-10-03T22:11:27.2898195Z",
+  "Updated": "2025-10-03T22:11:27.2898195Z",
+  "CreatedBy": [
+    "UiPath.UIAutomationCore, Version=25.10.16.0, Culture=neutral, PublicKeyToken=null",
+    "UiPath.Platform, Version=25.10.0.0, Culture=neutral, PublicKeyToken=null"
+  ]
+}
