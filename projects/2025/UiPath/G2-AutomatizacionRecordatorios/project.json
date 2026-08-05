@@ -1,0 +1,61 @@
+{
+  "name": "TrabajoAutomatizacion",
+  "projectId": "f2e5603c-685d-4024-9d7d-f44c1bf6f9ed",
+  "description": "Model your long running workflows using BPMN standard and implement them using RPA or API workflows. Use Studio version 24.10 or newer.",
+  "main": "Secuencia.xaml",
+  "dependencies": {
+    "UiPath.FlowchartBuilder.Activities": "[1.0.3]",
+    "UiPath.GSuite.Activities": "3.4.10",
+    "UiPath.IntegrationService.Activities": "1.18.0",
+    "UiPath.System.Activities": "25.6.1",
+    "UiPath.WebAPI.Activities": "1.21.1"
+  },
+  "webServices": [],
+  "entitiesStores": [],
+  "schemaVersion": "4.0",
+  "studioVersion": "25.0.175.0",
+  "projectVersion": "1.0.0",
+  "runtimeOptions": {
+    "autoDispose": false,
+    "netFrameworkLazyLoading": false,
+    "isPausable": true,
+    "isAttended": false,
+    "requiresUserInteraction": false,
+    "supportsPersistence": true,
+    "workflowSerialization": "NewtonsoftJson",
+    "excludedLoggedData": [
+      "Private:*",
+      "*password*"
+    ],
+    "executionType": "Workflow",
+    "readyForPiP": false,
+    "startsInPiP": false,
+    "mustRestoreAllDependencies": true,
+    "pipType": "ChildSession"
+  },
+  "designOptions": {
+    "projectProfile": "Developement",
+    "outputType": "Process",
+    "libraryOptions": {
+      "privateWorkflows": []
+    },
+    "processOptions": {
+      "ignoredFiles": []
+    },
+    "fileInfoCollection": [],
+    "saveToCloud": false
+  },
+  "expressionLanguage": "VisualBasic",
+  "entryPoints": [
+    {
+      "filePath": "Secuencia.xaml",
+      "uniqueId": "4a23af2e-de7a-45c6-b353-b0f560252610",
+      "input": [],
+      "output": []
+    }
+  ],
+  "isTemplate": false,
+  "templateProjectData": {},
+  "publishData": {},
+  "targetFramework": "Windows"
+}
