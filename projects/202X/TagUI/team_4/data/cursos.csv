@@ -1,0 +1,19 @@
+keyword,curso,docente,dias,horario,precio,descripcion
+peluqueria,Peluquería y Estilismo,Jerónimo,Martes y Jueves,15:00,$60.000,Salís haciendo los mejores cabellos.
+programacion,Programación,Ignacio,Lunes,17:00,$100.000,Formación integral en desarrollo y lógica de software.
+maquillaje,Maquillaje Profesional,Sofía,Viernes,16:00,$50.000,Técnicas avanzadas de estética y automaquillaje.
+barberia,Barbería Clásica,Juan,Miércoles,18:30,$45.000,Corte masculino y diseño de barba profesional.
+cocina,Cocina Profesional,Valentina,Lunes y Miércoles,09:00,$55.000,Preparación de platos y técnicas culinarias.
+reposteria,Repostería Creativa,Martín,Martes,10:00,$48.000,Dulces, tortas y técnicas de decoración.
+ingles,Inglés Conversacional,Carla,Lunes y Jueves,18:00,$70.000,Practicá conversación y vocabulario cotidiano.
+fotografia,Fotografía Digital,Rocío,Sábado,10:00,$60.000,Composición, luz y edición de imágenes.
+yoga,Yoga y Relajación,Diego,Martes y Jueves,08:00,$25.000,Posturas, respiración y bienestar general.
+carpinteria,Carpintería de Muebles,Agustina,Miércoles y Viernes,09:00,$65.000,Creación y restauración de muebles en madera.
+electronica,Electrónica Básica,Lucas,Sábado,15:00,$80.000,Circuitos, sensores y proyectos prácticos.
+robotica,Robótica para Niños,Milagros,Sábado,11:00,$75.000,Armado de robots y programación didáctica.
+guitarra,Guitarra y Música,Florencia,Martes y Viernes,14:00,$35.000,Acordes, ritmo y repertorio popular.
+dibujo,Dibujo y Pintura,Tomás,Jueves,15:00,$40.000,Técnicas de dibujo, acuarela y óleo.
+marketing,Marketing Digital,Camila,Lunes y Miércoles,19:00,$85.000,Redes sociales, publicidad y posicionamiento web.
+disenio,Diseño Gráfico,Nicolás,Viernes,18:00,$78.000,Herramientas de diseño y creación de piezas visuales.
+mecanica,Mecánica de Motos,Emanuel,Sábado,09:00,$90.000,Mantenimiento y reparación de motocicletas.
+huerta,Huerta y Jardinería,Julieta,Sábado,14:00,$30.000,Cultivo de hortalizas y cuidado de plantas.
