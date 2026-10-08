@@ -1,0 +1,3 @@
+# Default reviewers: GitHub requests a review from every owner below on each
+# PR (skipping the author), once the PR is marked ready for review.
+* @jaime-piperno @Maurosd
