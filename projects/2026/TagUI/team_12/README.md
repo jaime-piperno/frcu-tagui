@@ -17,7 +17,11 @@
 - **Nombre:** ComparaSuple · Comparador RPA de suplementos. Proyecto Integrador, primera etapa: Automatización Robótica de Procesos (RPA).
 - **Descripción:** El sistema consulta precios y disponibilidad de suplementos deportivos en seis tiendas, a partir de un catálogo Excel. Busca productos equivalentes, verifica sus fichas y genera una planilla comparativa con enlaces y evidencias de las consultas. Su objetivo es reducir las búsquedas repetitivas y los errores de transcripción del relevamiento manual. La comparación permite evaluar costos de reposición y decidir un precio de venta. **El precio de venta se carga en el catálogo; el programa calcula el menor precio confirmado entre los resultados consultados, no un precio de venta sugerido.**
 - **Tecnologías utilizadas:** TagUI v6.110 con Google Chrome (protocolo de depuración), Python 3 con `openpyxl`, JavaScript, y el PHP y PhantomJS incluidos en TagUI.
-- **Video de demostración:** _completar con el enlace._
+- **Video de demostración:** 
+
+https://github.com/user-attachments/assets/25678622-a70c-4f6d-8ba1-699c8cf27540
+
+
 
 ### Funcionamiento
 
