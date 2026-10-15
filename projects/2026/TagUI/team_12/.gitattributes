@@ -1,0 +1,6 @@
+# cmd.exe interpreta mal las etiquetas de un .cmd con finales LF: se entrega siempre con CRLF,
+# también en el ZIP que descarga GitHub.
+* text=auto
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.xlsx binary
