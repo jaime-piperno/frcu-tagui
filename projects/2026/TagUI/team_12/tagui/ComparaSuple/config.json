@@ -1,0 +1,54 @@
+{
+  "providers": [
+    {
+      "id": "mercadolibre",
+      "name": "Mercado Libre",
+      "base": "https://listado.mercadolibre.com.ar",
+      "adapter": "mercadolibre",
+      "allowed_hosts": ["listado.mercadolibre.com.ar", "www.mercadolibre.com.ar", "articulo.mercadolibre.com.ar"],
+      "home": "https://www.mercadolibre.com.ar/",
+      "search": "/{slug}"
+    },
+    {
+      "id": "cbdeportes",
+      "name": "CB Deportes",
+      "base": "https://cbdeportes.com",
+      "adapter": "tiendanube",
+      "search": "/search/?q={query}"
+    },
+    {
+      "id": "morashop",
+      "name": "Morashop",
+      "base": "https://www.morashop.ar",
+      "adapter": "tiendanube",
+      "search": "/search/?q={query}",
+      "query_mode": "compact"
+    },
+    {
+      "id": "disfit",
+      "name": "Disfit",
+      "base": "https://www.disfit.com.ar",
+      "adapter": "tiendanube",
+      "search": "/search/?q={query}",
+      "query_mode": "compact"
+    },
+    {
+      "id": "proteviking",
+      "name": "ProteViking",
+      "base": "https://www.proteviking.com.ar",
+      "adapter": "tiendanube",
+      "search": "/search/?q={query}",
+      "query_mode": "compact"
+    },
+    {
+      "id": "ultimax",
+      "name": "Ultimax",
+      "base": "https://ultimaxsuplementos.com",
+      "adapter": "ultimax",
+      "search": "/buscar?q={query}",
+      "access_env": "COMPARASUPLE_ULTIMAX_CLAVE",
+      "access_password": "ultimax2026"
+    }
+  ],
+  "max_pages": 2
+}

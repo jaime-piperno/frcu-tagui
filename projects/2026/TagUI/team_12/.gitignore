@@ -1,0 +1,22 @@
+# Archivos personales y generados; el catálogo de entrada sí se versiona.
+/tagui/src/
+/tagui/flows/
+.vs/
+.vscode/
+.idea/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+perfil_chrome/
+perfiles/
+browser-profile/
+salidas/
+*.log
+*.tag.js
+*.tag.raw
+*.tag.log
+rpa_python.*
+~$*.xlsx
