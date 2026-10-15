@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+venv/
+__pycache__/
+*.py[cod]
+resultados/
+configuraciones_busqueda.json
+Screenshot*.png
+README.md
+Dockerfile
+.dockerignore
