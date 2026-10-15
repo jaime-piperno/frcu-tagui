@@ -1,0 +1,122 @@
+Comida,Ingrediente,Cantidad,Unidad
+Milanesas con pure,Carne nalga,0.5,kg
+Milanesas con pure,Papa,1,kg
+Milanesas con pure,Pan rallado,0.2,kg
+Milanesas con pure,Huevo,2,unidad
+Fideos con tuco,Fideos,0.5,kg
+Fideos con tuco,Salsa de tomate,0.5,kg
+Fideos con tuco,Cebolla,1,unidad
+Pollo al horno con ensalada,Pollo,1,kg
+Pollo al horno con ensalada,Lechuga,1,unidad
+Pollo al horno con ensalada,Tomate,0.3,kg
+Tarta de verdura,Masa para tarta,1,unidad
+Tarta de verdura,Acelga,0.5,kg
+Tarta de verdura,Huevo,3,unidad
+Asado,Carne asado,1.5,kg
+Asado,Chorizo,0.5,kg
+Empanadas,Tapas de empanada,24,unidad
+Empanadas,Carne picada,0.5,kg
+Empanadas,Cebolla,2,unidad
+Empanadas,Huevo,2,unidad
+Empanadas,Aceitunas,0.1,kg
+Guiso de lentejas,Lentejas,0.5,kg
+Guiso de lentejas,Chorizo,0.3,kg
+Guiso de lentejas,Papa,0.5,kg
+Guiso de lentejas,Zanahoria,2,unidad
+Guiso de lentejas,Cebolla,1,unidad
+Guiso de lentejas,Salsa de tomate,0.3,kg
+Pizza casera,Harina,0.5,kg
+Pizza casera,Levadura,1,unidad
+Pizza casera,Salsa de tomate,0.3,kg
+Pizza casera,Queso mozzarella,0.4,kg
+Pizza casera,Aceitunas,0.05,kg
+Noquis con salsa,Papa,1,kg
+Noquis con salsa,Harina,0.3,kg
+Noquis con salsa,Huevo,1,unidad
+Noquis con salsa,Salsa de tomate,0.5,kg
+Noquis con salsa,Queso rallado,0.1,kg
+Arroz con pollo,Arroz,0.5,kg
+Arroz con pollo,Pollo,1,kg
+Arroz con pollo,Morron,1,unidad
+Arroz con pollo,Cebolla,1,unidad
+Arroz con pollo,Arvejas en lata,1,unidad
+Hamburguesas caseras,Carne picada,0.6,kg
+Hamburguesas caseras,Pan de hamburguesa,4,unidad
+Hamburguesas caseras,Queso en fetas,0.2,kg
+Hamburguesas caseras,Lechuga,1,unidad
+Hamburguesas caseras,Tomate,0.3,kg
+Pastel de papa,Carne picada,0.5,kg
+Pastel de papa,Papa,1.5,kg
+Pastel de papa,Cebolla,2,unidad
+Pastel de papa,Huevo,2,unidad
+Pastel de papa,Leche,0.2,lt
+Pastel de papa,Queso rallado,0.05,kg
+Tortilla de papas,Papa,1,kg
+Tortilla de papas,Huevo,6,unidad
+Tortilla de papas,Cebolla,1,unidad
+Canelones de verdura,Masa para canelones,1,unidad
+Canelones de verdura,Acelga,0.5,kg
+Canelones de verdura,Ricota,0.5,kg
+Canelones de verdura,Leche,0.5,lt
+Canelones de verdura,Harina,0.05,kg
+Canelones de verdura,Salsa de tomate,0.5,kg
+Canelones de verdura,Queso rallado,0.1,kg
+Locro,Maiz blanco,0.5,kg
+Locro,Porotos,0.25,kg
+Locro,Zapallo,1,kg
+Locro,Falda,0.5,kg
+Locro,Chorizo,0.3,kg
+Locro,Panceta,0.2,kg
+Locro,Cebolla,1,unidad
+Milanesas napolitanas con fritas,Carne nalga,0.5,kg
+Milanesas napolitanas con fritas,Pan rallado,0.2,kg
+Milanesas napolitanas con fritas,Huevo,2,unidad
+Milanesas napolitanas con fritas,Salsa de tomate,0.2,kg
+Milanesas napolitanas con fritas,Queso mozzarella,0.3,kg
+Milanesas napolitanas con fritas,Jamon cocido,0.15,kg
+Milanesas napolitanas con fritas,Papa,1,kg
+Merluza con ensalada,Merluza,0.8,kg
+Merluza con ensalada,Lechuga,1,unidad
+Merluza con ensalada,Tomate,0.3,kg
+Merluza con ensalada,Zanahoria,2,unidad
+Merluza con ensalada,Limon,1,unidad
+Ravioles con crema,Ravioles,1,kg
+Ravioles con crema,Crema de leche,0.2,lt
+Ravioles con crema,Jamon cocido,0.1,kg
+Ravioles con crema,Queso rallado,0.1,kg
+Sopa de verduras,Zapallo,0.5,kg
+Sopa de verduras,Zanahoria,2,unidad
+Sopa de verduras,Papa,0.5,kg
+Sopa de verduras,Cebolla,1,unidad
+Sopa de verduras,Puerro,1,unidad
+Sopa de verduras,Fideos,0.1,kg
+Wok de pollo y verduras,Pollo,0.8,kg
+Wok de pollo y verduras,Morron,2,unidad
+Wok de pollo y verduras,Cebolla,1,unidad
+Wok de pollo y verduras,Zanahoria,2,unidad
+Wok de pollo y verduras,Salsa de soja,0.1,lt
+Wok de pollo y verduras,Arroz,0.3,kg
+Lasagna,Masa para lasagna,1,unidad
+Lasagna,Carne picada,0.5,kg
+Lasagna,Salsa de tomate,0.5,kg
+Lasagna,Queso mozzarella,0.4,kg
+Lasagna,Leche,0.5,lt
+Lasagna,Harina,0.05,kg
+Bife con ensalada,Bife de chorizo,1,kg
+Bife con ensalada,Lechuga,1,unidad
+Bife con ensalada,Tomate,0.3,kg
+Bife con ensalada,Cebolla,1,unidad
+Polenta con salsa,Polenta,0.5,kg
+Polenta con salsa,Leche,0.5,lt
+Polenta con salsa,Salsa de tomate,0.5,kg
+Polenta con salsa,Carne picada,0.3,kg
+Polenta con salsa,Queso rallado,0.1,kg
+Choripanes,Chorizo,1,kg
+Choripanes,Pan frances,0.5,kg
+Tarta de jamon y queso,Masa para tarta,1,unidad
+Tarta de jamon y queso,Jamon cocido,0.2,kg
+Tarta de jamon y queso,Queso mozzarella,0.3,kg
+Tarta de jamon y queso,Huevo,3,unidad
+Tarta de jamon y queso,Leche,0.1,lt
+Pollo al disco,Pollo,1,kg
+Pollo al disco,Papa,2,kg
