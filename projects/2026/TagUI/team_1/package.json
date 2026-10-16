@@ -1,0 +1,19 @@
+{
+  "name": "rpa-comparador-supermercados",
+  "version": "1.0.0",
+  "description": "Bot RPA que compara precios de productos en supermercados argentinos (Carrefour, COTO y Día %) de forma 100% visible y automatizada. UTN FRCU 2026.",
+  "author": "UTN FRCU - Tecnologías para la Automatización",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node validador.js --test",
+    "diagnostico": "node validador.js --test && node -c rpa_runner.js server.js generar_excel.js",
+    "excel": "node generar_excel.js"
+  },
+  "dependencies": {
+    "exceljs": "^3.4.0",
+    "express": "^5.2.1",
+    "puppeteer-core": "^25.10.0",
+    "ws": "^8.21.3"
+  }
+}
