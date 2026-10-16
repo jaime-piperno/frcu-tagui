@@ -1,0 +1,20 @@
+# Plantilla de configuracion del bot de Telegram.
+# Copiar este archivo como "config.txt" (en la raiz del proyecto) y completar
+# con los valores propios. config.txt NO se sube a git (esta en .gitignore),
+# asi que cada integrante del grupo usa el suyo.
+#
+# Como se obtienen:
+#   TELEGRAM_TOKEN   -> hablarle a @BotFather en Telegram, /newbot, copiar el token
+#   TELEGRAM_CHAT_ID -> hablarle al bot y abrir en el navegador:
+#                       https://api.telegram.org/bot<TOKEN>/getUpdates
+#                       el numero esta en result[0].message.chat.id
+#                       (para un GRUPO el id es negativo, ej: -1001234567890)
+#                       Es el chat desde donde se le hacen los pedidos al bot:
+#                       el bot ignora a cualquier otro chat.
+#   GRUPO_TELEGRAM   -> el nombre del grupo, tal cual se ve en Telegram. El robot
+#                       lo escribe en el buscador de Telegram Web para abrirlo y
+#                       mandarle la lista. Puede ser el mismo chat del TELEGRAM_CHAT_ID.
+
+TELEGRAM_TOKEN=1234567890:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TELEGRAM_CHAT_ID=1234567890
+GRUPO_TELEGRAM=Lista de Compras
