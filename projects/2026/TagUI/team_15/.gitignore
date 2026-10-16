@@ -1,0 +1,23 @@
+# Secrets — nunca subir
+.env
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Logs y temporales
+*.log
+*.tmp
+*.old
+bot.lock
+
+# Entorno
+.python-version
+
+# IDE
+.idea/
+.vscode/
