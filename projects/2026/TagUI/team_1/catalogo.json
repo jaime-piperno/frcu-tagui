@@ -1,0 +1,466 @@
+{
+  "gaseosas": [
+    {
+      "id": "gaseosa_coca_cola_225l",
+      "categoria": "gaseosas",
+      "marca": "Coca Cola",
+      "producto": "Coca Cola",
+      "variante": "Original",
+      "cantidad": 2.25,
+      "unidad": "L",
+      "nombre_completo": "Coca Cola Original 2.25 L",
+      "termino_busqueda": "Coca Cola 2,25 L",
+      "nombres_supermercados": [
+        "Gaseosa cola Coca Cola sabor original 2,25 lts",
+        "Gaseosa cola Coca Cola sabor original 2.25 lts",
+        "Gaseosa Coca-Cola Sabor Original 2,25 Lt",
+        "Gaseosa Coca-Cola Sabor Original 2.25 Lt.",
+        "Gaseosa Coca Cola Sabor Original 2.25 L",
+        "Gaseosa Coca-Cola Sabor Original 2,25 L",
+        "Coca Cola Sabor Original 2.25 L",
+        "Gaseosa Coca Cola 2.25 L",
+        "Coca Cola 2.25 L",
+        "Coca Cola Original 2.25 L"
+      ]
+    },
+    {
+      "id": "gaseosa_sprite_225l",
+      "categoria": "gaseosas",
+      "marca": "Sprite",
+      "producto": "Sprite",
+      "variante": "Lima Limón",
+      "cantidad": 2.25,
+      "unidad": "L",
+      "nombre_completo": "Sprite Lima Limón 2.25 L",
+      "termino_busqueda": "Sprite 2.25 L",
+      "nombres_supermercados": [
+        "Gaseosa Sprite Lima Limón 2.25 L",
+        "Gaseosa Sprite Lima Limon 2.25 L",
+        "Gaseosa Sprite Lima Limon 2,25 L",
+        "Gaseosa Sprite Sabor Lima-Limón 2.25 L",
+        "Sprite 2.25 L"
+      ]
+    },
+    {
+      "id": "gaseosa_manaos_cola_225l",
+      "categoria": "gaseosas",
+      "marca": "Manaos",
+      "producto": "Manaos Cola",
+      "variante": "Cola",
+      "cantidad": 2.25,
+      "unidad": "L",
+      "nombre_completo": "Manaos Cola 2.25 L",
+      "termino_busqueda": "manaos",
+      "nombres_supermercados": [
+        "Gaseosa cola Manaos 2,25 lts",
+        "Gaseosa Cola Manaos 2.25l",
+        "Gaseosa Manaos Cola 2,25 Lts.",
+        "Gaseosa Cola Manaos 2,25 lts",
+        "Gaseosa Cola Manaos 2.25 l",
+        "Gaseosa Cola Manaos 2,25 l",
+        "Gaseosa Manaos Cola 2.25 L",
+        "Gaseosa Manaos Cola 2,25 L",
+        "Gaseosa Manaos Cola 2,25 Lts",
+        "Gaseosa Manaos Cola 2.25 Lts",
+        "Manaos Cola 2.25 L",
+        "Manaos Cola 2,25 L"
+      ]
+    },
+    {
+      "id": "gaseosa_manaos_naranja_225l",
+      "categoria": "gaseosas",
+      "marca": "Manaos",
+      "producto": "Manaos Naranja",
+      "variante": "Naranja",
+      "cantidad": 2.25,
+      "unidad": "L",
+      "nombre_completo": "Manaos Naranja 2.25 L",
+      "termino_busqueda": "manaos",
+      "nombres_supermercados": [
+        "Gaseosa Naranja Manaos 2.25l",
+        "Gaseosa Manaos Naranja 2,25 Lts.",
+        "Gaseosa naranja Manaos 2,25 lts",
+        "Gaseosa Naranja Manaos 2,25 lts",
+        "Gaseosa Naranja Manaos 2.25 l",
+        "Gaseosa Naranja Manaos 2,25 l",
+        "Gaseosa Manaos Naranja 2.25 L",
+        "Gaseosa Manaos Naranja 2,25 L",
+        "Gaseosa Manaos Naranja 2,25 Lts",
+        "Gaseosa Manaos Naranja 2.25 Lts",
+        "Manaos Naranja 2.25 L",
+        "Manaos Naranja 2,25 L"
+      ]
+    },
+    {
+      "id": "gaseosa_manaos_lima_limon_225l",
+      "categoria": "gaseosas",
+      "marca": "Manaos",
+      "producto": "Manaos Lima Limón",
+      "variante": "Lima Limón",
+      "cantidad": 2.25,
+      "unidad": "L",
+      "nombre_completo": "Manaos Lima Limón 2.25 L",
+      "termino_busqueda": "manaos",
+      "nombres_supermercados": [
+        "Gaseosa lima limón Manaos 2,25 lts",
+        "Gaseosa Lima Limón Manaos 2.25l",
+        "Gaseosa Manaos Lima Limón 2,25 Lts.",
+        "Gaseosa lima limon Manaos 2,25 lts",
+        "Gaseosa Lima Limon Manaos 2.25l",
+        "Gaseosa Manaos Lima Limon 2,25 Lts.",
+        "Gaseosa Lima Limón Manaos 2.25 l",
+        "Gaseosa Lima Limon Manaos 2.25 l",
+        "Gaseosa Manaos Lima Limón 2.25 L",
+        "Gaseosa Manaos Lima Limon 2.25 L",
+        "Gaseosa Manaos Lima Limon 2,25 L",
+        "Gaseosa Manaos Lima Limón 2,25 L",
+        "Gaseosa Manaos Lima Limón 2,25 Lts",
+        "Gaseosa Manaos Lima Limon 2,25 Lts",
+        "Manaos Lima Limón 2.25 L",
+        "Manaos Lima Limon 2.25 L",
+        "Manaos Lima Limon 2,25 L"
+      ]
+    }
+  ],
+  "arroz": [
+    {
+      "id": "arroz_gallo_largo_fino_1kg",
+      "categoria": "arroz",
+      "marca": "Gallo",
+      "producto": "Arroz Gallo",
+      "variante": "Largo Fino",
+      "cantidad": 1,
+      "unidad": "kg",
+      "nombre_completo": "Arroz Gallo Largo Fino 1 kg",
+      "termino_busqueda": "Arroz Gallo Largo Fino 1 kg",
+      "nombres_supermercados": [
+        "Arroz Gallo Largo Fino 1 kg",
+        "Arroz Largo Fino Gallo 1 Kg",
+        "Arroz Gallo Oro Largo Fino 1 Kg",
+        "Arroz Gallo Largo Fino 1kg"
+      ]
+    },
+    {
+      "id": "arroz_lucchetti_largo_fino_1kg",
+      "categoria": "arroz",
+      "marca": "Lucchetti",
+      "producto": "Arroz Lucchetti",
+      "variante": "Largo Fino",
+      "cantidad": 1,
+      "unidad": "kg",
+      "nombre_completo": "Arroz Lucchetti Largo Fino 1 kg",
+      "termino_busqueda": "Arroz Lucchetti 1 kg",
+      "nombres_supermercados": [
+        "Arroz Largo Fino Luchetti 1 Kg.",
+        "Arroz Largo Fino Luchetti 1 Kg",
+        "Arroz Luchetti Largo Fino 1 kg",
+        "Arroz Luchetti 1 kg",
+        "Arroz Lucchetti Largo Fino 1 kg",
+        "Arroz Largo Fino Lucchetti 1 Kg",
+        "Arroz Lucchetti 1 kg"
+      ]
+    }
+  ],
+  "fideos": [
+    {
+      "id": "fideos_matarazzo_tallarines_500g",
+      "categoria": "fideos",
+      "marca": "Matarazzo",
+      "producto": "Fideos Matarazzo",
+      "variante": "Tallarines",
+      "cantidad": 500,
+      "unidad": "g",
+      "nombre_completo": "Fideos Matarazzo Tallarines 500 g",
+      "termino_busqueda": "Fideos Matarazzo Tallarines 500 g",
+      "nombres_supermercados": [
+        "Fideos tallarines N15 Matarazzo 500 g.",
+        "Fideos Tallarin N15 Matarazzo 500 g.",
+        "Fideos Tallarines N15 Matarazzo 500 g",
+        "Fideos Tallarin N15 Matarazzo 500 g",
+        "Fideos Tallarines Matarazzo 500g",
+        "Fideos Tallarin Matarazzo 500g",
+        "Fideos Matarazzo Tallarines 500 g",
+        "Fideos Tallarines Matarazzo 500 Gr",
+        "Fideos Tallarín Matarazzo 500 g",
+        "Fideos Al Huevo Tallarines Matarazzo 500 g"
+      ]
+    },
+    {
+      "id": "fideos_lucchetti_tallarines_500g",
+      "categoria": "fideos",
+      "marca": "Lucchetti",
+      "producto": "Fideos Lucchetti",
+      "variante": "Tallarín N5",
+      "cantidad": 500,
+      "unidad": "g",
+      "nombre_completo": "Fideos Lucchetti Tallarín N5 500 g",
+      "termino_busqueda": "Lucchetti Tallarín",
+      "nombres_supermercados": [
+        "Fideos Tallarin N5 Luchetti 500 Gr.",
+        "Fideos Tallarin N5 Lucchetti 500g",
+        "Fideos tallarin N5 Lucchetti 500 g.",
+        "Fideos Tallarin N5 Luchetti 500 Gr",
+        "Fideos Tallarin N5 Luchetti 500g",
+        "Fideos Tallarin N5 Luchetti 500 g",
+        "Fideos Tallarin N5 Lucchetti 500 Gr.",
+        "Fideos Tallarin N5 Lucchetti 500 Gr",
+        "Fideos Tallarin N5 Lucchetti 500 g",
+        "Fideos Tallarin N5 Lucchetti 500 g.",
+        "Fideos tallarin N5 Lucchetti 500g",
+        "Fideos Lucchetti Tallarín N5 500 g",
+        "Fideos Lucchetti Tallarin N5 500 g",
+        "Fideos Lucchetti Tallarines N5 500 g",
+        "Fideos Lucchetti Tallarines 500 g",
+        "Fideos Tallarines Lucchetti 500 Gr",
+        "Fideos Tallarín Lucchetti 500 g",
+        "Fideos Luchetti Tallarines 500 g",
+        "Fideos Tallarines Luchetti 500 Gr",
+        "Fideos Tallarín Luchetti 500 g",
+        "Fideos Tallarin Lucchetti 500 g",
+        "Fideos Tallarin Luchetti 500 g",
+        "Fideos Tallarin Lucchetti 500g",
+        "Fideos Tallarin Luchetti 500g",
+        "Tallarin Lucchetti",
+        "Tallarin Luchetti",
+        "Tallarines Lucchetti",
+        "Tallarines Luchetti",
+        "Tallarin N5 Lucchetti",
+        "Tallarin N5 Luchetti",
+        "Tallarin",
+        "Tallarines"
+      ]
+    }
+  ],
+  "galletitas": [
+    {
+      "id": "galletitas_oreo_original_118g",
+      "categoria": "galletitas",
+      "marca": "Oreo",
+      "producto": "Galletitas Oreo",
+      "variante": "Original",
+      "cantidad": 118,
+      "unidad": "g",
+      "nombre_completo": "Galletitas Oreo Original 118 g",
+      "termino_busqueda": "Galletitas Oreo 118 g",
+      "nombres_supermercados": [
+        "Galletitas Oreo Original 118 g",
+        "Galletitas Oreo Rellenas con Crema Sabor Original Menos sodio 118 Gr.",
+        "Galletitas Dulces Oreo 118 g",
+        "Galletitas Rellenas Oreo Sabor Vainilla 118 g"
+      ]
+    },
+    {
+      "id": "galletitas_criollitas_clasicas_300g",
+      "categoria": "galletitas",
+      "marca": "Criollitas",
+      "producto": "Galletitas Criollitas",
+      "variante": "Clásicas",
+      "cantidad": 300,
+      "unidad": "g",
+      "nombre_completo": "Galletitas Criollitas Clásicas 300 g",
+      "termino_busqueda": "Galletitas Criollitas",
+      "nombres_supermercados": [
+        "Galletitas original Criollitas 100 g. x 3 uni",
+        "Galletitas original Criollitas 100 g x 3 uni",
+        "Galletitas Criollitas 100 g. x 3 uni",
+        "Galletitas Criollitas 100 g x 3 uni",
+        "Galletitas Criollitas 100g x 3 uni",
+        "Galletitas Criollitas 100g x 3",
+        "Galletitas Criollitas 100 g x 3",
+        "Galletitas Criollitas 3x 100gramos",
+        "Galletitas Criollitas 3x 100g",
+        "Galletitas Criollitas 3 x 100g",
+        "Galletitas Criollitas 3 x 100 g",
+        "Galletitas Criollitas 3x100g",
+        "Galletitas Criollitas 3x 100 gramos",
+        "Galletitas Criollitas 3x100 gramos",
+        "Galletitas Criollitas 3 x 100 gramos",
+        "Galletitas Criollitas 3 x 100 gr",
+        "Galletitas Criollitas 3 x 100 grs",
+        "Galletitas Criollitas Clásicas 300 g",
+        "Galletitas Criollitas 300 g",
+        "Galletitas Crackers CRIOLLITAS 300g",
+        "Crackers Criollitas 300 Gr.",
+        "Crackers Criollitas 300g",
+        "Crackers Criollitas 100 g. x 3 uni",
+        "Crackers Criollitas 3 x 100 g",
+        "Crackers Criollitas 3x 100gramos",
+        "Galletitas De Agua Criollitas 300 Gr",
+        "Galletitas Saladas Criollitas Clásicas 300 g",
+        "Galletitas Criollitas Pack Familiar 3 x 100 g",
+        "Galletitas Criollitas Pack Familiar x3 300 g",
+        "Galletitas clásicas Criollitas 100 g. x 3 uni",
+        "Galletitas clásicas Criollitas 3 x 100 g"
+      ]
+    }
+  ],
+  "leche": [
+    {
+      "id": "leche_la_serenisima_entera_1l",
+      "categoria": "leche",
+      "marca": "La Serenísima",
+      "producto": "Leche La Serenísima",
+      "variante": "Clásica / Entera",
+      "cantidad": 1,
+      "unidad": "L",
+      "nombre_completo": "Leche La Serenísima Clásica 1 L",
+      "termino_busqueda": "Leche La Serenisima 1 L",
+      "nombres_supermercados": [
+        "Leche Larga Vida Clásica 3% La Serenisima 1 Lt.",
+        "Leche Larga Vida Entera Ua Clasica 3% LA SERENISIMA 1l",
+        "Leche La serenisima clásica 3% 1L",
+        "Leche Larga Vida Clásica 3 % La Serenisima 1 Lt.",
+        "Leche Larga Vida Entera Ua Clasica 3 % LA SERENISIMA 1l",
+        "Leche La serenisima clásica 3 % 1L",
+        "Leche La Serenísima Clásica 1 L",
+        "Leche Entera La Serenísima Clásica 1 L",
+        "Leche UHT Clásica 3% La Serenísima 1 L",
+        "Leche UHT Clásica 3 % La Serenísima 1 L",
+        "Leche La Serenisima Clásica 3% 1 L",
+        "Leche La Serenisima Clásica 3 % 1 L",
+        "Leche La Serenisima Entera 1 L"
+      ]
+    },
+    {
+      "id": "leche_tregar_entera_1l",
+      "categoria": "leche",
+      "marca": "Tregar",
+      "producto": "Leche Tregar",
+      "variante": "Entera",
+      "cantidad": 1,
+      "unidad": "L",
+      "nombre_completo": "Leche Tregar Entera 1 L",
+      "termino_busqueda": "Leche Tregar Entera 1 L",
+      "nombres_supermercados": [
+        "Leche Tregar Entera 1 L",
+        "Leche Larga Vida Entera Tregar 1 Lt",
+        "Leche UHT Entera Tregar 1 L"
+      ]
+    }
+  ],
+  "aceite": [
+    {
+      "id": "aceite_cocinero_girasol_15l",
+      "categoria": "aceite",
+      "marca": "Cocinero",
+      "producto": "Aceite Cocinero",
+      "variante": "Girasol",
+      "cantidad": 1.5,
+      "unidad": "L",
+      "nombre_completo": "Aceite Cocinero Girasol 1.5 L",
+      "termino_busqueda": "Aceite Cocinero Girasol 1.5 L",
+      "nombres_supermercados": [
+        "Aceite Cocinero Girasol 1.5 L",
+        "Aceite De Girasol Cocinero 1.5 Lt",
+        "Aceite Puro de Girasol Cocinero 1,5 L"
+      ]
+    },
+    {
+      "id": "aceite_natura_girasol_15l",
+      "categoria": "aceite",
+      "marca": "Natura",
+      "producto": "Aceite Natura",
+      "variante": "Girasol",
+      "cantidad": 1.5,
+      "unidad": "L",
+      "nombre_completo": "Aceite Natura Girasol 1.5 L",
+      "termino_busqueda": "Aceite Natura Girasol 1.5 L",
+      "nombres_supermercados": [
+        "Aceite Natura Girasol 1.5 L",
+        "Aceite De Girasol Natura 1.5 Lt",
+        "Aceite Puro de Girasol Natura 1,5 L"
+      ]
+    }
+  ],
+  "yerba": [
+    {
+      "id": "yerba_playadito_tradicional_1kg",
+      "categoria": "yerba",
+      "marca": "Playadito",
+      "producto": "Yerba Playadito",
+      "variante": "Tradicional",
+      "cantidad": 1,
+      "unidad": "kg",
+      "nombre_completo": "Yerba Playadito 1 kg",
+      "termino_busqueda": "Yerba Playadito 1 kg",
+      "nombres_supermercados": [
+        "Yerba Mate Playadito 1 kg",
+        "Yerba Playadito Con Palo 1 Kg",
+        "Yerba Mate Tradicional Playadito 1 Kg",
+        "Yerba Playadito 1 kg"
+      ]
+    },
+    {
+      "id": "yerba_taragui_tradicional_1kg",
+      "categoria": "yerba",
+      "marca": "Taragüí",
+      "producto": "Yerba Taragüí",
+      "variante": "Tradicional",
+      "cantidad": 1,
+      "unidad": "kg",
+      "nombre_completo": "Yerba Taragüí Tradicional 1 kg",
+      "termino_busqueda": "Yerba Taragui 1 kg",
+      "nombres_supermercados": [
+        "Yerba Taragüí Tradicional 1 kg",
+        "Yerba Mate Taragüi Con Palo 1 Kg",
+        "Yerba Mate Tradicional Taragui 1 Kg"
+      ]
+    }
+  ],
+  "limpieza": [
+    {
+      "id": "detergente_magistral_limon_500ml",
+      "categoria": "limpieza",
+      "marca": "Magistral",
+      "producto": "Detergente Magistral",
+      "variante": "Limón",
+      "cantidad": 500,
+      "unidad": "ml",
+      "nombre_completo": "Detergente Magistral Limón 500 ml",
+      "termino_busqueda": "Detergente Magistral Limon 500 ml",
+      "nombres_supermercados": [
+        "Detergente Magistral Limón 500 ml",
+        "Detergente Magistral Ultra Limon Botella 500 Ml.",
+        "Detergente Lavavajillas Magistral Limón 500 ml"
+      ]
+    },
+    {
+      "id": "lavandina_ayudin_clasica_1l",
+      "categoria": "limpieza",
+      "marca": "Ayudín",
+      "producto": "Lavandina Ayudín",
+      "variante": "Clásica",
+      "cantidad": 1,
+      "unidad": "L",
+      "nombre_completo": "Lavandina Ayudín Clásica 1 L",
+      "termino_busqueda": "Lavandina Ayudin 1 L",
+      "nombres_supermercados": [
+        "Lavandina Ayudín Clásica 1 L",
+        "Lavandina Común Clásica Ayudín 1 Lt",
+        "Lavandina Ayudin Clasica 1 L"
+      ]
+    },
+    {
+      "id": "papel_higienico_higienol_max_4un",
+      "categoria": "limpieza",
+      "marca": "Higienol",
+      "producto": "Papel Higiénico Higienol Max",
+      "variante": "Max Hoja Simple 100 m",
+      "cantidad": 4,
+      "unidad": "un",
+      "nombre_completo": "Papel Higiénico Higienol Max 4 un",
+      "termino_busqueda": "Higienol Max",
+      "nombres_supermercados": [
+        "Papel higiénico Higienol Max hoja simple 100 mts 4 uni",
+        "Papel Higiénico HIGIENOL Max Hoja Simple 100 M 4 Un",
+        "Papel Higiénico Higienol Max hoja simple 100 m 4 Ud.",
+        "Papel Higiénico Higienol Max 100 m 4 un",
+        "Papel higiénico Higienol Max 100 mts 4 uni",
+        "Papel Higiénico Higienol Max Doble Hoja 100 M 4 Un",
+        "Papel Higienico Higienol Max Doble Hoja 4 Unidades",
+        "Papel Higiénico Higienol Max 4 un",
+        "Papel Higienico Higienol Max"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guía Visual - Cómo usar el Reporte de Supermercados</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at 50% 5%, #1e293b 0%, #0f172a 60%, #020617 100%);
+      color: #f8fafc;
+      width: 1280px;
+      height: 820px;
+      padding: 34px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .badge-top {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
+      padding: 5px 16px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .badge-top span.dot {
+      width: 8px;
+      height: 8px;
+      background: #3b82f6;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #60a5fa;
+    }
+    h1 {
+      font-size: 33px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 15.5px;
+      color: #94a3b8;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .subtitle strong {
+      color: #f1f5f9;
+    }
+
+    /* Grid cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: rgba(30, 41, 59, 0.65);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 22px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Card 1 - Gold/Amber */
+    .card-gold {
+      border-top: 4px solid #f59e0b;
+      background: radial-gradient(circle at top, rgba(245, 158, 11, 0.12) 0%, rgba(30, 41, 59, 0.7) 75%);
+    }
+    .card-gold .tag-question {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .card-gold .sheet-badge {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+    }
+
+    /* Card 2 - Emerald/Green */
+    .card-green {
+      border-top: 4px solid #10b981;
+      background: radial-gradient(circle at top, rgba(16, 185, 129, 0.12) 0%, rgba(30, 41, 59, 0.7) 75%);
+    }
+    .card-green .tag-question {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .card-green .sheet-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+    }
+
+    /* Card 3 - Sky/Cyan */
+    .card-cyan {
+      border-top: 4px solid #06b6d4;
+      background: radial-gradient(circle at top, rgba(6, 182, 212, 0.12) 0%, rgba(30, 41, 59, 0.7) 75%);
+    }
+    .card-cyan .tag-question {
+      background: rgba(6, 182, 212, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(6, 182, 212, 0.35);
+    }
+    .card-cyan .sheet-badge {
+      background: linear-gradient(135deg, #06b6d4, #0284c7);
+      box-shadow: 0 6px 18px rgba(6, 182, 212, 0.35);
+    }
+
+    .tag-question {
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.35;
+      margin-bottom: 14px;
+      min-height: 48px;
+    }
+
+    .sheet-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin-bottom: 16px;
+    }
+
+    .features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .features-list li {
+      font-size: 13px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      line-height: 1.4;
+    }
+    .features-list li strong {
+      color: #f8fafc;
+    }
+    .bullet-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      margin-top: 1px;
+    }
+
+    .card-footer {
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .card-footer-title {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .card-footer-desc {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Excel Tabs Visual Bar */
+    .excel-preview {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    .excel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .excel-icon {
+      background: #107c41;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+    .tabs-container {
+      display: flex;
+      gap: 8px;
+    }
+    .tab {
+      padding: 6px 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1e293b;
+      color: #64748b;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .tab.active-1 {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fde68a;
+      border: 1px solid rgba(245, 158, 11, 0.55);
+      font-weight: 700;
+    }
+    .tab.active-2 {
+      background: rgba(16, 185, 129, 0.18);
+      color: #a7f3d0;
+      border: 1px solid rgba(16, 185, 129, 0.55);
+      font-weight: 700;
+    }
+    .tab.active-4 {
+      background: rgba(6, 182, 212, 0.18);
+      color: #bae6fd;
+      border: 1px solid rgba(6, 182, 212, 0.55);
+      font-weight: 700;
+    }
+
+    /* Footer disclaimer */
+    .tip-box {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .tip-box strong {
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge-top">
+      <span class="dot"></span>
+      Sistema RPA de Monitoreo · Carrefour · COTO · Día %
+    </div>
+    <h1>¿CÓMO LEER EL REPORTE EXCEL?</h1>
+    <p class="subtitle">
+      El archivo <strong>reporte_supermercados.xlsx</strong> organiza la información en 5 hojas. 
+      Elegí qué pestaña abrir según lo que necesites consultar hoy:
+    </p>
+  </div>
+
+  <!-- 3 Decision Cards -->
+  <div class="cards-grid">
+
+    <!-- Card 1 -->
+    <div class="card card-gold">
+      <div>
+        <div class="tag-question">Caso 1 · Elección de Compra</div>
+        <div class="card-title">Si querés saber a cuál súper ir a comprar todo</div>
+        <div class="sheet-badge">
+          <span>🏆</span> Pestaña 1: Conclusiones
+        </div>
+        <ul class="features-list">
+          <li>
+            <span class="bullet-icon">🥇</span>
+            <span><strong>Supermercado Ganador:</strong> Quién tiene el costo total de canasta más bajo.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">💰</span>
+            <span><strong>Costo Total Canasta:</strong> Comparativa global Carrefour vs COTO vs Día.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">⚡</span>
+            <span><strong>Compra Combinada:</strong> Ahorro máximo comprando lo más barato en cada uno.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">📝</span>
+            <span><strong>Resumen Narrativo:</strong> Conclusión en lenguaje claro redactada por el bot.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <div class="card-footer-title">Resultado Rápido</div>
+        <div class="card-footer-desc">
+          <span>👉</span> Decisión directa en 10 segundos
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card card-green">
+      <div>
+        <div class="tag-question">Caso 2 · Planificación Detallada</div>
+        <div class="card-title">Si querés armar la lista del súper y ver diferencias</div>
+        <div class="sheet-badge">
+          <span>🛒</span> Pestaña 2: Canasta Mensual
+        </div>
+        <ul class="features-list">
+          <li>
+            <span class="bullet-icon">📊</span>
+            <span><strong>Matriz Comparativa:</strong> Todos los artículos de la lista renglón por renglón.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">🟢</span>
+            <span><strong>Celdas en Verde:</strong> Destaca automáticamente el súper más barato por ítem.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">⚖️</span>
+            <span><strong>Brecha de Precios:</strong> Compará cuánto más cobra un súper que otro.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">📋</span>
+            <span><strong>Totales al Pie:</strong> Sumatoria exacta de tu lista personalizada.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <div class="card-footer-title">Resultado Rápido</div>
+        <div class="card-footer-desc">
+          <span>👉</span> Planificación ítem por ítem
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card card-cyan">
+      <div>
+        <div class="tag-question">Caso 3 · Consulta Rápida</div>
+        <div class="card-title">Si buscaste un producto suelto hoy desde la terminal</div>
+        <div class="sheet-badge">
+          <span>🔎</span> Pestaña 4: Consultas Individuales
+        </div>
+        <ul class="features-list">
+          <li>
+            <span class="bullet-icon">🕒</span>
+            <span><strong>Historial Diario:</strong> Registro de las búsquedas interactivas del día.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">🏷️</span>
+            <span><strong>Precios Unitarios:</strong> Valor relevado en vivo para el ítem consultado.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">✅</span>
+            <span><strong>Estado de Validación:</strong> Chequeo de coincidencia semántica y marca.</span>
+          </li>
+          <li>
+            <span class="bullet-icon">🔗</span>
+            <span><strong>Link al Producto:</strong> Enlace web directo a la góndola digital.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <div class="card-footer-title">Resultado Rápido</div>
+        <div class="card-footer-desc">
+          <span>👉</span> Chequeo inmediato de un producto puntual
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Excel Navigation Bar Mockup -->
+  <div class="excel-preview">
+    <div class="excel-title">
+      <span class="excel-icon">XLSX</span>
+      <span>reporte_supermercados.xlsx &nbsp;•&nbsp; Pestañas del libro:</span>
+    </div>
+    <div class="tabs-container">
+      <div class="tab active-1">🏆 1. Conclusiones</div>
+      <div class="tab active-2">🛒 2. Canasta Mensual</div>
+      <div class="tab">📊 3. Ranking Precios</div>
+      <div class="tab active-4">🔎 4. Consultas Individuales</div>
+      <div class="tab">⚠️ 5. Stock y Disponibilidad</div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <span>💡</span>
+    <span><strong>Tip de ahorro:</strong> Si vas a un único súper mirá la <strong>Pestaña 1</strong>. Si querés optimizar al 100% tu compra dividiendo entre súpers, usá la <strong>Pestaña 2</strong>.</span>
+  </div>
+
+</body>
+</html>
