@@ -1,0 +1,831 @@
+{
+  "name": "Conciliación Bancaria - Asistida y Programada",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Conciliación Bancaria Asistida",
+        "formDescription": "Paso 1 de 2. En la siguiente pantalla vas a ver los movimientos bancarios registrados y podrás subir los comprobantes de transferencia (PDF) a conciliar.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Cargado por",
+              "placeholder": "Tu nombre (opcional)"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Ver movimientos"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -2000,
+        400
+      ],
+      "id": "3cfcb90a-7cb1-40c9-8e5b-0c248f7d6ec5",
+      "name": "Formulario de carga",
+      "webhookId": "e75d6f30-db6a-44fb-9a58-a3d23657b1fc"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4",
+          "mode": "list",
+          "cachedResultName": "Plantilla_Conciliacion_Bancaria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 880732744,
+          "mode": "list",
+          "cachedResultName": "Movimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit#gid=880732744"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1776,
+        400
+      ],
+      "id": "2def4633-48bb-4e68-8d41-36a4597d9587",
+      "name": "Leer movimientos (vista)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rsCr74Qpw5RPcXus",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================\n// NODO: Armar tabla de movimientos  (modo asistido / formulario)\n// ---------------------------------------------------------------------\n// Entrada: las filas de la hoja \"Movimientos\" que leyó el nodo anterior\n//          (una fila = un item, con las columnas Fecha, Monto,\n//          Descripción y Referencia).\n// Salida:  un único item con el campo \"html\", que es la tabla que el\n//          nodo \"Subir comprobantes\" le muestra al operador.\n// =====================================================================\n\n// Escapa los caracteres especiales de HTML (&, <, >) para que un texto\n// de la planilla no rompa la tabla ni se interprete como código HTML.\nconst esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\n// Se descartan las filas vacías (sin monto), por ejemplo filas en blanco\n// al final de la planilla.\nconst movimientos = $input.all().filter(m => m.json.Monto !== undefined && m.json.Monto !== '');\n\nlet html;\nif (movimientos.length === 0) {\n  // Planilla vacía: se avisa al operador en lugar de mostrar una tabla vacía.\n  html = '<p><b>No hay movimientos cargados en la planilla.</b> Los comprobantes que subas quedarán como \"No encontrada\".</p>';\n} else {\n  // Una fila <tr> por movimiento. La columna Descripción se busca con y\n  // sin tilde por si en la planilla el encabezado se escribió sin acento.\n  const filas = movimientos.map(m => `<tr>\n    <td>${esc(m.json.Fecha)}</td>\n    <td>$ ${esc(m.json.Monto)}</td>\n    <td>${esc(m.json['Descripción'] ?? m.json.Descripcion)}</td>\n    <td>${esc(m.json.Referencia)}</td>\n  </tr>`).join('');\n  // Tabla completa con encabezado y la cantidad de movimientos.\n  html = `<p><b>Movimientos bancarios registrados (${movimientos.length})</b></p>\n<table>\n  <thead><tr><th>Fecha</th><th>Monto</th><th>Descripción</th><th>Referencia</th></tr></thead>\n  <tbody>${filas}</tbody>\n</table>`;\n}\n\n// Se devuelve un solo item; el formulario lo usa con {{ $json.html }}.\nreturn [{ json: { html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        400
+      ],
+      "id": "b8477ce7-77a8-4f97-9b9d-5063af410933",
+      "name": "Armar tabla de movimientos"
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldType": "html",
+              "html": "{{ $json.html }}"
+            },
+            {
+              "fieldLabel": "Comprobantes de transferencia",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Conciliación Bancaria Asistida",
+          "formDescription": "Paso 2 de 2. Revisá los movimientos y subí uno o más comprobantes en PDF.",
+          "buttonLabel": "Conciliar"
+        }
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        -1328,
+        400
+      ],
+      "id": "ab666512-db02-4bf2-8971-0e1b04a3a3c5",
+      "name": "Subir comprobantes",
+      "webhookId": "676182c6-afee-4a1a-b475-ad46434f6ef5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================\n// NODO: Separar comprobantes  (modo asistido / formulario)\n// ---------------------------------------------------------------------\n// Entrada: el item que devuelve el formulario \"Subir comprobantes\".\n//          Si el operador sube varios PDF, n8n los entrega TODOS en un\n//          solo item, cada uno como una propiedad binaria distinta\n//          (por ejemplo \"Comprobantes_de_transferencia_0\", \"..._1\").\n// Salida:  un item por PDF, con el archivo siempre bajo la clave \"data\",\n//          igual que los que salen de \"Descargar comprobante\" (Drive).\n//          Así el resto del flujo trata igual a los dos modos.\n// =====================================================================\n\nconst item = $input.first();          // único item que llega del formulario\nconst binary = item.binary || {};     // archivos adjuntos (puede venir vacío)\nconst keys = Object.keys(binary);     // nombres de las propiedades binarias\n\n// El campo es obligatorio en el formulario, pero se controla igual para\n// cortar con un error claro si por algún motivo no llegó ningún archivo.\nif (keys.length === 0) {\n  throw new Error('No se recibió ningún comprobante.');\n}\n\n// Se arma un item nuevo por cada archivo:\n//  - json.archivo: nombre original del PDF (se usa en el resumen y para\n//    guardarlo en \"Procesados\").\n//  - binary.data:  el PDF en sí, que lee \"Extraer texto del PDF\".\nreturn keys.map((k) => ({\n  json: { archivo: binary[k].fileName || k },\n  binary: { data: binary[k] },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        400
+      ],
+      "id": "8bb965cb-254c-4738-9fa6-3f5e8225987a",
+      "name": "Separar comprobantes"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2000,
+        720
+      ],
+      "id": "b8dee08b-543b-4234-ba95-ede116496d44",
+      "name": "Ejecucion diaria"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "*.pdf",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1QcZCwR25Jq0dDSbpoUu7QzBPDqM4urlr",
+            "mode": "list",
+            "cachedResultName": "Comprobantes",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1QcZCwR25Jq0dDSbpoUu7QzBPDqM4urlr"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1776,
+        720
+      ],
+      "id": "af10fb2c-84e4-4ef8-a06f-347384966483",
+      "name": "Buscar nuevos comprobantes",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nkdav7J4rKAzK0CG",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1552,
+        720
+      ],
+      "id": "3584f7b8-0b20-4701-977d-90ee69298b28",
+      "name": "Descargar comprobante",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nkdav7J4rKAzK0CG",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        560
+      ],
+      "id": "35634695-5815-4b95-a039-904f145b7cce",
+      "name": "Extraer texto del PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================\n// NODO: Identificar origen  (punto de unión de los dos modos)\n// ---------------------------------------------------------------------\n// Los dos caminos (formulario y ejecución diaria) llegan a \"Extraer\n// texto del PDF\", que solo devuelve el texto. Este nodo le vuelve a\n// agregar a cada texto los datos de su archivo original:\n//  - origen:  \"formulario\" o \"diario\" (lo usan los nodos If más adelante)\n//  - archivo: nombre del PDF\n//  - driveId: ID del archivo en Drive (solo modo diario, para moverlo)\n//  - binary:  el PDF original (solo modo formulario, para subirlo a\n//             \"Procesados\", porque ese archivo todavía no está en Drive)\n// =====================================================================\n\n// Devuelve true si el nodo indicado se ejecutó en esta corrida.\n// Se usa try/catch porque consultar un nodo que no corrió puede dar error.\nfunction seEjecuto(nombre) {\n  try { return $(nombre).isExecuted; } catch (e) { return false; }\n}\n\nconst textos = $input.all();                               // textos extraídos, uno por PDF\nconst desdeFormulario = seEjecuto('Separar comprobantes'); // si corrió, vino del formulario\n\n// Items originales del camino que se ejecutó. Están en el mismo orden\n// que los textos, así que el texto i corresponde al archivo i.\nconst origenes = desdeFormulario\n  ? $('Separar comprobantes').all()\n  : $('Buscar nuevos comprobantes').all();\n\nreturn textos.map((t, i) => {\n  const src = origenes[i];   // archivo original que corresponde a este texto\n  if (desdeFormulario) {\n    // Modo formulario: se conserva el PDF (binary) para subirlo a Drive.\n    return {\n      json: { text: t.json.text || '', origen: 'formulario', archivo: src.json.archivo },\n      binary: src.binary,\n    };\n  }\n  // Modo diario: alcanza con el ID de Drive para después mover el archivo.\n  return {\n    json: { text: t.json.text || '', origen: 'diario', archivo: src.json.name, driveId: src.json.id },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        560
+      ],
+      "id": "66831b0c-a520-4bd2-ab2b-53ca2df646de",
+      "name": "Identificar origen"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4",
+          "mode": "list",
+          "cachedResultName": "Plantilla_Conciliacion_Bancaria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 880732744,
+          "mode": "list",
+          "cachedResultName": "Movimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit#gid=880732744"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -432,
+        560
+      ],
+      "id": "5a99d2ee-9ec2-4a73-98a5-a379b2a37680",
+      "name": "Leer movimientos",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rsCr74Qpw5RPcXus",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================\n// NODO: Normalizar y Comparar Datos  (LÓGICA PRINCIPAL)\n// ---------------------------------------------------------------------\n// Para cada comprobante:\n//   1. Extrae del texto del PDF: fecha, monto, destinatario y referencia.\n//   2. Busca en la hoja \"Movimientos\" una fila con la MISMA fecha, monto\n//      y referencia.\n//   3. Le asigna un Estado: \"Conciliada\", \"No encontrada\" o\n//      \"Requiere revisión\".\n// Entradas: $('Identificar origen') -> textos de los comprobantes\n//           $('Leer movimientos')   -> filas de la planilla del banco\n// Salida:   un item por comprobante con los datos extraídos y el Estado.\n// Si cambia el formato del comprobante, este es el nodo a modificar.\n// =====================================================================\n\n// Tabla para pasar el nombre del mes (como viene en el comprobante) a\n// número de dos dígitos. Se incluyen \"septiembre\" y \"setiembre\".\nconst meses = {\n  enero: '01', febrero: '02', marzo: '03', abril: '04',\n  mayo: '05', junio: '06', julio: '07', agosto: '08',\n  septiembre: '09', setiembre: '09', octubre: '10',\n  noviembre: '11', diciembre: '12'\n};\n\n// Pasa un monto a número. Acepta \"10.000\", \"10.000,50\" (formato argentino)\n// o un número que ya viene como tal desde Sheets.\n// Quita los puntos de miles y cambia la coma decimal por punto.\n// Devuelve null si el valor está vacío o no es un número válido.\nfunction aNumero(valor) {\n  if (typeof valor === 'number') return valor;\n  if (valor === undefined || valor === null || String(valor).trim() === '') return null;\n  const n = parseFloat(String(valor).trim().replace(/\\./g, '').replace(',', '.'));\n  return Number.isNaN(n) ? null : n;\n}\n\nconst comprobantes = $('Identificar origen').all();  // un item por PDF\nconst movimientos = $('Leer movimientos').all();     // filas de \"Movimientos\"\n\nconst resultado = comprobantes.map(comp => {\n  const texto = comp.json.text;                            // texto completo del PDF\n  const lineas = texto.split('\\n').map(l => l.trim());     // mismo texto, línea por línea\n\n  // --- FECHA ---------------------------------------------------------\n  // Formato del comprobante: 14/septiembre/2026 -> se convierte a\n  // 14/09/2026 para compararla con la columna Fecha de la planilla.\n  const fechaMatch = texto.match(/(\\d{1,2})\\/([a-zñáéíóú]+)\\/(\\d{4})/i);\n  let fecha = '';\n  if (fechaMatch) {\n    const dia = fechaMatch[1].padStart(2, '0');                // \"4\" -> \"04\"\n    const mes = meses[fechaMatch[2].toLowerCase()] || '00';    // mes desconocido -> \"00\" (no va a conciliar)\n    fecha = `${dia}/${mes}/${fechaMatch[3]}`;\n  }\n\n  // --- MONTO ---------------------------------------------------------\n  // Toma el primer importe precedido por \"$\" (ej: \"$ 10.000\" -> 10000).\n  const montoMatch = texto.match(/\\$\\s?([\\d.,]+)/);\n  const monto = montoMatch ? aNumero(montoMatch[1]) : null;\n\n  // --- DESTINATARIO --------------------------------------------------\n  // Es la línea justo después del primer \"CVU\" (el CVU de destino).\n  // Depende de la posición de las líneas: si el formato cambia, falla.\n  const idxCVU = lineas.findIndex(l => l.startsWith('CVU'));\n  const destinatario = idxCVU !== -1 ? lineas[idxCVU + 1] : '';\n\n  // --- REFERENCIA ----------------------------------------------------\n  // Es la línea después de la que contiene \"operación\" (\"N.° de operación\").\n  const idxRef = lineas.findIndex(l => l.toLowerCase().includes('operación'));\n  const referencia = idxRef !== -1 ? (lineas[idxRef + 1] || '').trim() : '';\n\n  // --- ESTADO --------------------------------------------------------\n  // Antes de comparar, nos aseguramos de haber podido extraer los 3 datos clave.\n  // Si falta alguno, no tiene sentido decir \"No encontrada\" (no sabemos si\n  // hubiera conciliado o no): se marca aparte para que alguien lo revise a mano.\n  let estado;\n  if (!fecha || monto === null || !referencia) {\n    estado = \"Requiere revisión\";\n  } else {\n    // Busca un movimiento con monto, fecha y referencia exactamente iguales.\n    // Fecha y Referencia se comparan como texto; Monto como número.\n    const match = movimientos.find(m =>\n      aNumero(m.json.Monto) === monto &&\n      String(m.json.Fecha).trim() == fecha &&\n      String(m.json.Referencia).trim() == referencia\n    );\n    estado = match ? \"Conciliada\" : \"No encontrada\";\n  }\n\n  // Item de salida. Fecha, Monto, Destinatario, Referencia y Estado van a\n  // la hoja \"Resultado\"; Comprobante, origen y driveId se usan después\n  // para el resumen y para archivar el PDF. El binary (PDF) se conserva\n  // para el caso del formulario.\n  return {\n    json: {\n      Fecha: fecha,\n      Monto: monto === null ? '' : monto,\n      Destinatario: destinatario,\n      Referencia: referencia,\n      Estado: estado,\n      Comprobante: comp.json.archivo,\n      origen: comp.json.origen,\n      driveId: comp.json.driveId\n    },\n    binary: comp.binary\n  };\n});\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        560
+      ],
+      "id": "7c9ef4dd-c9e6-4e2f-bd03-e565241c05f6",
+      "name": "Normalizar y Comparar Datos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f18fb70e-639a-4fa8-a3ac-d211bd84c9ab",
+              "leftValue": "={{ $json.origen }}",
+              "rightValue": "formulario",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        320
+      ],
+      "id": "e17a8893-3ea8-4407-aff1-440a4e7b41d9",
+      "name": "¿Vino del formulario?"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.Comprobante }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Lkeh3No7mv38hh5GQ5zIqD4A0fD14mUx"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        288,
+        256
+      ],
+      "id": "35b7a337-0e48-49b4-bf11-236410c5dff1",
+      "name": "Guardar en procesados",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nkdav7J4rKAzK0CG",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.driveId }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Lkeh3No7mv38hh5GQ5zIqD4A0fD14mUx"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        288,
+        416
+      ],
+      "id": "f91db10c-c2a9-4ae8-b3ae-239b4cd0680f",
+      "name": "Mover a procesados",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nkdav7J4rKAzK0CG",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4",
+          "mode": "list",
+          "cachedResultName": "Plantilla_Conciliacion_Bancaria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 353499965,
+          "mode": "list",
+          "cachedResultName": "Resultado",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KFIFC3xt5YdG7553GfM6kOkMqjnfdUEkhzhCS6c3_U4/edit#gid=353499965"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $json.Fecha }}",
+            "Monto": "={{ $json.Monto }}",
+            "Destinatario": "={{ $json.Destinatario }}",
+            "Estado": "={{ $json.Estado }}",
+            "Referencia": "={{ $json.Referencia }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Monto",
+              "displayName": "Monto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Destinatario",
+              "displayName": "Destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Referencia",
+              "displayName": "Referencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        720
+      ],
+      "id": "e0c1f6ab-d6ce-470d-923a-11a418a1db00",
+      "name": "Registrar Resultado",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rsCr74Qpw5RPcXus",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================================\n// NODO: Armar resumen del mail\n// ---------------------------------------------------------------------\n// Junta todos los comprobantes procesados en esta corrida en un solo resumen,\n// en vez de mandar un mail por cada uno. También arma la pantalla de\n// resultado que se le muestra al operador cuando la carga vino del formulario.\n// Salida: un único item con\n//   - Resumen: HTML del cuerpo del mail (lo usa \"Enviar Alerta\")\n//   - html:    página de resultado (la usa \"Mostrar resultado\")\n//   - origen:  \"formulario\" o \"diario\" (lo usa \"¿Mostrar resultado?\")\n// =====================================================================\n\n// Se toman los resultados directamente del nodo de comparación (y no de\n// la entrada) porque ahí están todos los campos, incluido el Estado.\nconst items = $('Normalizar y Comparar Datos').all();\n// Todos los items de una corrida tienen el mismo origen; se toma el primero.\nconst origen = items[0]?.json.origen || 'diario';\n\n// Nombre del operador que completó el formulario (campo opcional).\n// Se usa try/catch porque en el modo diario ese nodo no se ejecutó.\nlet cargadoPor = '';\nif (origen === 'formulario') {\n  try { cargadoPor = $('Formulario de carga').first().json['Cargado por'] || ''; } catch (e) {}\n}\n\n// Escapa caracteres especiales de HTML para no romper el mail ni la página.\nconst esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\n// Contadores para el resumen: total y cantidad por cada Estado.\nconst total = items.length;\nconst conciliadas = items.filter(i => i.json.Estado === \"Conciliada\").length;\nconst noEncontradas = items.filter(i => i.json.Estado === \"No encontrada\").length;\nconst requiereRevision = items.filter(i => i.json.Estado === \"Requiere revisión\").length;\n\n// Texto que indica cómo se originó la ejecución (se muestra en mail y pantalla).\nconst modo = origen === 'formulario'\n  ? `Carga manual desde el formulario${cargadoPor ? ` (por ${esc(cargadoPor)})` : ''}`\n  : 'Ejecución diaria programada';\n\n// ----- Mail -----\n// Una línea por comprobante con destinatario, monto, referencia y estado.\nconst detalle = items.map(i =>\n  `<li>${esc(i.json.Destinatario)} — $${esc(i.json.Monto)} — Ref: ${esc(i.json.Referencia)} — <b>${esc(i.json.Estado)}</b></li>`\n).join('');\n\n// Cuerpo completo del mail: origen, totales y detalle.\nconst resumen = `\n<p><b>Origen:</b> ${modo}</p>\n<p>Se procesaron <b>${total}</b> comprobante(s):</p>\n<ul>\n  <li>Conciliadas: ${conciliadas}</li>\n  <li>No encontradas: ${noEncontradas}</li>\n  <li>Requieren revisión: ${requiereRevision}</li>\n</ul>\n<p><b>Detalle:</b></p>\n<ul>\n${detalle}\n</ul>\n`;\n\n// ----- Pantalla de resultado (solo modo formulario) -----\n// Devuelve la etiqueta de color según el Estado:\n// verde = Conciliada, amarillo = Requiere revisión, rojo = No encontrada.\nconst badge = (estado) =>\n  estado === 'Conciliada' ? '<span class=\"badge ok\">Conciliada</span>'\n  : estado === 'Requiere revisión' ? '<span class=\"badge warn\">Requiere revisión</span>'\n  : '<span class=\"badge bad\">No encontrada</span>';\n\n// Una fila de la tabla por comprobante.\nconst filas = items.map(i => `<tr>\n  <td>${esc(i.json.Comprobante)}</td>\n  <td>${esc(i.json.Fecha)}</td>\n  <td>$${esc(i.json.Monto)}</td>\n  <td>${esc(i.json.Destinatario)}</td>\n  <td>${esc(i.json.Referencia)}</td>\n  <td>${badge(i.json.Estado)}</td>\n</tr>`).join('');\n\n// Página completa: título, tarjetas con los totales y tabla de detalle.\n// El bloque <style> define el diseño (colores de tarjetas y etiquetas).\nconst html = `<!DOCTYPE html>\n<html lang=\"es\"><head><meta charset=\"utf-8\">\n<title>Resultado de conciliación</title>\n<style>\n  body { font-family: system-ui, -apple-system, sans-serif; background:#f4f6f8; margin:0; padding:32px; color:#1a1a1a; }\n  h1 { font-size: 22px; margin: 0 0 4px; }\n  p.sub { color:#555; margin-top:0; }\n  .cards { display:flex; gap:16px; margin:24px 0; flex-wrap:wrap; }\n  .card { flex:1; min-width:140px; background:#fff; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.1); text-align:center; }\n  .card .n { font-size:28px; font-weight:700; }\n  .ok-c .n{ color:#1e8e3e } .warn-c .n{ color:#b8860b } .bad-c .n{ color:#d32f2f }\n  table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.1); }\n  th, td { padding:10px 14px; text-align:left; border-bottom:1px solid #eee; font-size:14px; }\n  th { background:#fafafa; font-weight:600; }\n  .badge { padding:4px 10px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; }\n  .badge.ok { background:#e6f4ea; color:#1e8e3e; }\n  .badge.warn { background:#fff8e1; color:#b8860b; }\n  .badge.bad { background:#fdecea; color:#d32f2f; }\n  .foot { color:#555; font-size:13px; margin-top:16px; }\n</style></head>\n<body>\n  <h1>Conciliación Bancaria Asistida</h1>\n  <p class=\"sub\">${modo} &middot; ${total} comprobante(s) procesado(s)</p>\n  <div class=\"cards\">\n    <div class=\"card ok-c\"><div class=\"n\">${conciliadas}</div>Conciliadas</div>\n    <div class=\"card warn-c\"><div class=\"n\">${requiereRevision}</div>Requieren revisión</div>\n    <div class=\"card bad-c\"><div class=\"n\">${noEncontradas}</div>No encontradas</div>\n  </div>\n  <table>\n    <thead><tr><th>Comprobante</th><th>Fecha</th><th>Monto</th><th>Destinatario</th><th>Referencia</th><th>Estado</th></tr></thead>\n    <tbody>${filas}</tbody>\n  </table>\n  <p class=\"foot\">El resultado quedó registrado en la planilla, los comprobantes se guardaron en la carpeta \"Procesados\" de Google Drive y se envió el resumen por correo.</p>\n</body></html>`;\n\n// Se devuelve un solo item: así el mail se envía una sola vez por ejecución.\nreturn [{ json: { Resumen: resumen, html, origen } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        720
+      ],
+      "id": "7883176e-e21d-4d2f-bb2d-2d3eb2896512",
+      "name": "Armar resumen del mail"
+    },
+    {
+      "parameters": {
+        "sendTo": "grupo16aut@gmail.com",
+        "subject": "Nuevo comprobante de Mercado Pago cargado.",
+        "message": "={{ $json.Resumen }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        720
+      ],
+      "id": "eab9025a-5c92-441d-8a16-5d0908eb94ad",
+      "name": "Enviar Alerta",
+      "webhookId": "eebf857e-b8e4-4645-851f-d93f67a17558",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mjY84lJEtrfJ3i0O",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4ee4d5b7-7f22-4871-9191-3b877d34b68c",
+              "leftValue": "={{ $('Armar resumen del mail').first().json.origen }}",
+              "rightValue": "formulario",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        720
+      ],
+      "id": "29c62df5-cbd7-460d-85c6-717d51b5ac3d",
+      "name": "¿Mostrar resultado?"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "showText",
+        "responseText": "={{ $('Armar resumen del mail').first().json.html }}"
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        912,
+        640
+      ],
+      "id": "cad1951d-cc75-4895-9245-76cfcf8ef204",
+      "name": "Mostrar resultado",
+      "webhookId": "73cb4b57-fc16-4fed-9ac6-5210319ed4c8"
+    },
+    {
+      "parameters": {
+        "content": "## 1. OBTENCIÓN\n\n**Modo asistido (arriba):** el operador abre el formulario, ve los movimientos del banco y sube los comprobantes.\n\n**Modo desatendido (abajo):** todos los días a las 9 busca y descarga los comprobantes nuevos de la carpeta de Drive.",
+        "height": 168,
+        "width": 1120
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2048,
+        176
+      ],
+      "id": "368e67dc-2923-4274-8493-e02c98b8321d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## 2. EXTRACCIÓN\n\nLee el texto real de cada PDF, registra de qué modo vino y trae los movimientos bancarios desde Google Sheets.",
+        "height": 128,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        336
+      ],
+      "id": "d2ca8e78-2f99-4cc4-aa06-af67128f7898",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## 3. COMPARACIÓN\n\nExtrae fecha, monto, destinatario y referencia del texto, y concilia contra los movimientos del banco."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        320
+      ],
+      "id": "01c3b00d-4e1b-47c1-acb0-a66623ae6910",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## 4. RESULTADO\n\nArchiva cada comprobante en \"Procesados\" (sube los del formulario, mueve los de la carpeta), guarda el resultado, notifica por mail y, si vino del formulario, muestra el resultado en pantalla.",
+        "height": 152,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        16
+      ],
+      "id": "645e340c-eda5-4ad4-88bb-406d077b119b",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formulario de carga": {
+      "main": [
+        [
+          {
+            "node": "Leer movimientos (vista)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer movimientos (vista)": {
+      "main": [
+        [
+          {
+            "node": "Armar tabla de movimientos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar tabla de movimientos": {
+      "main": [
+        [
+          {
+            "node": "Subir comprobantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir comprobantes": {
+      "main": [
+        [
+          {
+            "node": "Separar comprobantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar comprobantes": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto del PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecucion diaria": {
+      "main": [
+        [
+          {
+            "node": "Buscar nuevos comprobantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar nuevos comprobantes": {
+      "main": [
+        [
+          {
+            "node": "Descargar comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar comprobante": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto del PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer texto del PDF": {
+      "main": [
+        [
+          {
+            "node": "Identificar origen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar origen": {
+      "main": [
+        [
+          {
+            "node": "Leer movimientos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer movimientos": {
+      "main": [
+        [
+          {
+            "node": "Normalizar y Comparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar y Comparar Datos": {
+      "main": [
+        [
+          {
+            "node": "¿Vino del formulario?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Vino del formulario?": {
+      "main": [
+        [
+          {
+            "node": "Guardar en procesados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mover a procesados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Resultado": {
+      "main": [
+        [
+          {
+            "node": "Armar resumen del mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar resumen del mail": {
+      "main": [
+        [
+          {
+            "node": "Enviar Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Alerta": {
+      "main": [
+        [
+          {
+            "node": "¿Mostrar resultado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Mostrar resultado?": {
+      "main": [
+        [
+          {
+            "node": "Mostrar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b2780d5d-8e03-41f6-8312-b71a70b25da0",
+  "meta": {
+    "instanceId": "e39eb71f1a49db4798932aa4da6f08d4cf78749db8be1980e0adba4aa42f0fe4"
+  },
+  "nodeGroups": [],
+  "id": "Ka2u3axiZ37IkUUM",
+  "tags": []
+}
