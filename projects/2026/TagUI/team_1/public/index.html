@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bot RPA que compara precios de productos en supermercados argentinos (Carrefour, COTO y Día %) de forma 100% visible y automatizada. UTN FRCU 2026.">
+    <title>RPA Comparador de Precios | Dashboard Inteligente</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+</head>
+<body>
+    <!-- Efectos de fondo ambientales -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+
+
+    <div class="dashboard-wrapper">
+        <!-- Barra de Navegación Superior (Top Navbar) -->
+        <header class="topbar">
+            <div class="topbar-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-title-row">
+                        <h1>RPA Comparador</h1>
+                        <span class="brand-version">v2.0</span>
+                    </div>
+                    <p class="brand-subtitle">Optimizador inteligente de precios en supermercados • UTN FRCU 2026</p>
+                </div>
+            </div>
+
+            <div class="topbar-actions">
+                <div class="status-badge-container">
+                    <span class="status-pulse-dot" id="system-pulse"></span>
+                    <span id="status-indicator" class="indicator idle">Listo</span>
+                </div>
+                <div class="super-tags">
+                    <span class="super-tag tag-carrefour"><i class="fa-solid fa-store"></i> Carrefour</span>
+                    <span class="super-tag tag-coto"><i class="fa-solid fa-cart-shopping"></i> COTO</span>
+                    <span class="super-tag tag-dia"><i class="fa-solid fa-bag-shopping"></i> Día %</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Grid Principal del Dashboard -->
+        <main class="dashboard-grid">
+            <!-- COLUMNA IZQUIERDA: Acciones, Búsqueda y Herramientas -->
+            <section class="grid-column left-column">
+                
+                <!-- Tarjeta 1: Compra del Mes -->
+                <div class="glass-card card-action" id="card-compra-mes">
+                    <div class="card-header">
+                        <div class="card-header-icon icon-primary">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <h3>Compra del Mes</h3>
+                                <span id="badge-canasta-count" class="super-tag badge-canasta-status">
+                                    <i class="fa-solid fa-basket-shopping" style="margin-right: 4px;"></i> <span id="count-prods-canasta">0</span> productos
+                                </span>
+                            </div>
+                            <p class="card-desc">Procesa la canasta personalizada de productos (<code>input.csv</code>) comparando precios en los 3 supermercados.</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Sección de Selección y Lista de Productos de la Canasta -->
+                        <div class="canasta-quick-add-panel">
+                            <label class="field-label-micro">
+                                <i class="fa-solid fa-plus-circle" style="color: #818cf8;"></i> Agregar producto a la canasta:
+                            </label>
+                            <div class="quick-add-row">
+                                <div class="quick-add-select-wrap">
+                                    <select id="quick-select-canasta" class="form-control-select canasta-dropdown">
+                                        <option value="">-- Selecciona producto para agregar a la lista --</option>
+                                    </select>
+                                </div>
+                                <button type="button" id="btn-quick-add-prod" class="btn btn-action-add" title="Agregar producto seleccionado a la canasta">
+                                    <i class="fa-solid fa-plus"></i> Agregar
+                                </button>
+                            </div>
+
+                            <!-- Lista limpia de productos seleccionados en ese mismo lugar, sin mayor decoración -->
+                            <div class="canasta-lista-simple-wrap">
+                                <div class="canasta-lista-header">
+                                    <span><i class="fa-solid fa-list-ul"></i> Productos en la canasta (<strong id="preview-count-text">0</strong>):</span>
+                                </div>
+                                <div class="canasta-lista-scroll">
+                                    <ul id="canasta-simple-lista" class="canasta-simple-lista">
+                                        <!-- Filas limpias generadas dinámicamente -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group-primary" style="margin-top: 1.1rem;">
+                            <button id="btn-compra-mes" class="btn btn-primary" style="width: 100%;">
+                                <i class="fa-solid fa-play"></i> Iniciar Proceso Completo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta 2: Búsqueda Rápida Individual -->
+                <div class="glass-card card-action">
+                    <div class="card-header">
+                        <div class="card-header-icon icon-cyan">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <h3>Búsqueda Rápida</h3>
+                                <span class="super-tag" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                                    <i class="fa-solid fa-lock" style="margin-right: 4px;"></i> Catálogo Cerrado
+                                </span>
+                            </div>
+                            <p class="card-desc">Selecciona un producto representativo del catálogo oficial para comparar entre Carrefour, COTO y Día %.</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                            <div class="form-group">
+                                <label for="select-producto">
+                                    <i class="fa-solid fa-basket-shopping"></i> Producto del Catálogo
+                                </label>
+                                <select id="select-producto" class="form-control-select">
+                                    <option value="">-- Selecciona un producto del catálogo --</option>
+                                </select>
+                            </div>
+
+                            <!-- Ficha Técnica del Producto Seleccionado -->
+                            <div id="box-info-producto" style="display: none; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: 12px; font-size: 0.82rem;">
+                                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+                                    <span><strong>Marca:</strong> <span id="info-marca" style="color: #38bdf8;">-</span></span>
+                                    <span><strong>Variante:</strong> <span id="info-variante" style="color: #a78bfa;">-</span></span>
+                                    <span><strong>Presentación:</strong> <span id="info-presentacion" style="color: #34d399; font-weight: bold;">-</span></span>
+                                </div>
+                            </div>
+
+                            <div class="search-action-wrap" style="margin-top: 1.15rem;">
+                                <button id="btn-buscar-individual" class="btn btn-action-search" style="width: 100%;">
+                                    <i class="fa-solid fa-bolt"></i> Comparar en 3 Súper
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+            </section>
+
+            <!-- COLUMNA DERECHA: Monitoreo en Vivo, Configuración y Consola -->
+            <section class="grid-column right-column">
+
+                <!-- Panel Monitor de Ejecución de Supermercados -->
+                <div class="glass-card monitor-panel" id="monitor-panel">
+                    <div class="monitor-header">
+                        <div class="monitor-title">
+                            <span class="live-pulse" id="monitor-live-pulse"><i class="fa-solid fa-circle"></i></span>
+                            <span id="monitor-status-text">RPA EN ESPERA</span>
+                        </div>
+                        <div class="monitor-badge" id="monitor-browser-badge">
+                            <i class="fa-solid fa-robot"></i> MONITOREO ACTIVO
+                        </div>
+                    </div>
+
+                    <!-- Pasos de los 3 Supermercados -->
+                    <div class="super-steps-grid">
+                        <div class="super-step-card" id="step-carrefour">
+                            <div class="super-step-icon">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                            <div class="super-step-info">
+                                <h5>1. Carrefour</h5>
+                                <span class="super-step-status" id="status-carrefour">En espera</span>
+                            </div>
+                        </div>
+
+                        <div class="super-step-card" id="step-coto">
+                            <div class="super-step-icon">
+                                <i class="fa-solid fa-cart-shopping"></i>
+                            </div>
+                            <div class="super-step-info">
+                                <h5>2. COTO Digital</h5>
+                                <span class="super-step-status" id="status-coto">En espera</span>
+                            </div>
+                        </div>
+
+                        <div class="super-step-card" id="step-dia">
+                            <div class="super-step-icon">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                            <div class="super-step-info">
+                                <h5>3. Día %</h5>
+                                <span class="super-step-status" id="status-dia">En espera</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barra de Progreso General con Porcentaje Destacado -->
+                    <div class="progress-section">
+                        <div class="progress-meta-row">
+                            <span class="progress-meta-label"><i class="fa-solid fa-bars-progress"></i> Progreso General</span>
+                            <span class="progress-percent-badge" id="progress-percent-badge">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="main-progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Consola Virtual de Logs (Terminal) -->
+                <div class="glass-card terminal-card status-panel">
+                    <div class="terminal-topbar">
+                        <div class="terminal-dots">
+                            <span class="dot dot-red"></span>
+                            <span class="dot dot-yellow"></span>
+                            <span class="dot dot-green"></span>
+                        </div>
+                        <div class="terminal-title">
+                            <i class="fa-solid fa-terminal"></i> Terminal en Vivo / Logs
+                        </div>
+                        <div class="terminal-meta">
+                            <span>UTF-8</span>
+                        </div>
+                    </div>
+
+                    <div id="log-container" class="log-container">
+                        <p class="log-msg welcome-msg">
+                            <span class="log-timestamp">[SYS]</span> Bot RPA Comparador inicializado. Selecciona una acción para comenzar...
+                        </p>
+                    </div>
+
+                    <div class="abort-bar" id="abort-bar">
+                        <button id="btn-abort" class="btn btn-abort" title="Detener inmediatamente la ejecución del RPA">
+                            <i class="fa-solid fa-stop"></i> Detener Ejecución del Bot
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p><strong>UTN FRCU</strong> — Tecnologías para la Automatización — Año 2026</p>
+            <p class="footer-sub">Bot RPA Comparador de Precios • Carrefour · COTO · Día %</p>
+        </footer>
+    </div>
+
+    <!-- Modal de Edición de Canasta Mensual -->
+    <div id="editar-lista-modal" class="modal">
+        <div class="modal-content glass-card-modal modal-lista-dialog">
+            <div class="modal-header-flex">
+                <div class="modal-title-box">
+                    <div class="modal-header-icon-small">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <h2>Configurar Canasta de Productos</h2>
+                        <p class="modal-subtitle">
+                            Modifica los productos a buscar en los 3 supermercados. Cada producto se buscará individualmente como producto único (1 unidad).
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-cerrar-x-modal" title="Cerrar">&times;</button>
+            </div>
+
+            <!-- Panel de Agregar Producto en el Modal -->
+            <div class="modal-add-box">
+                <div class="modal-add-label">
+                    <i class="fa-solid fa-plus-circle" style="color: #818cf8;"></i>
+                    <span>Agregar producto a la canasta:</span>
+                </div>
+                <div class="modal-add-controls">
+                    <div class="modal-add-select-wrap">
+                        <select id="modal-select-nuevo-prod" class="modal-input modal-select-dropdown">
+                            <option value="">-- Selecciona producto disponible del catálogo --</option>
+                        </select>
+                    </div>
+                    <button type="button" id="modal-btn-agregar-prod" class="btn btn-primary btn-modal-add">
+                        <i class="fa-solid fa-plus"></i> Agregar
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-table-header-info">
+                <span><i class="fa-solid fa-table-list"></i> Productos configurados (<strong id="modal-total-count">0</strong>):</span>
+                <button type="button" id="btn-add-empty-row" class="btn-link-action">
+                    <i class="fa-solid fa-plus"></i> Añadir fila vacía
+                </button>
+            </div>
+
+            <div class="modal-table-container">
+                <table class="modal-table" id="modal-table-canasta">
+                    <thead>
+                        <tr>
+                            <th style="width: 85%;">Producto del Catálogo</th>
+                            <th style="width: 15%; text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-tbody-canasta">
+                        <!-- Filas generadas dinámicamente por app.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions-bar">
+                <button id="btn-cerrar-editar-modal" class="btn btn-secondary">Cancelar</button>
+                <button id="btn-guardar-lista" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Canasta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica del Frontend -->
+    <script src="app.js"></script>
+</body>
+</html>

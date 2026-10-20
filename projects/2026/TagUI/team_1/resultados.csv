@@ -1,0 +1,22 @@
+modo,producto_solicitado,nombre_encontrado,precio,supermercado,url,fecha,stock_status,cantidad,unidad
+compra_mes,Coca Cola,"Gaseosa cola Coca Cola sabor original 2,25 lts","$ 5.900,00",Carrefour,https://www.carrefour.com.ar/gaseosa-cola-coca-cola-sabor-original-225-lts-30138/p,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Manaos Lima Limón,"Gaseosa lima limón Manaos 2,25 lts","$ 2.420,00",Carrefour,https://www.carrefour.com.ar/gaseosa-lima-limon-manaos-225-lts-530791/p,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Arroz Gallo,Arroz largo fino Gallo 00000 en bolsa 1 kg,"$ 2.619,00",Carrefour,https://www.carrefour.com.ar/arroz-largo-fino-gallo-00000-en-bolsa-1-kg-718789/p,2026-09-30,DISPONIBLE,1,kg
+compra_mes,Fideos Lucchetti,Fideos tallarin N5 Lucchetti 500 g.,"$ 1.749,00",Carrefour,https://www.carrefour.com.ar/fideos-tallarin-n5-lucchetti-500-g-726311/p,2026-09-30,DISPONIBLE,500,g
+compra_mes,Leche Tregar,Leche entera larga vida Tregar 1 l.,"$ 1.912,50 c/u",Carrefour,https://www.carrefour.com.ar/leche-entera-larga-vida-tregar-1-l/p,2026-09-30,DISPONIBLE,1,L
+compra_mes,Galletitas Criollitas,Galletitas original Criollitas 100 g. x 3 uni,"$ 1.979,00",Carrefour,https://www.carrefour.com.ar/galletitas-original-criollitas-100-g-x-3-uni/p,2026-09-30,DISPONIBLE,300,g
+compra_mes,Coca Cola,"Gaseosa Coca-Cola Sabor Original 2,25 Lt","$5.015,00",COTO,https://www.coto.com.ar/productos/gaseosa-coca-cola-sabor-original-2-25-lt-/_/R-00014450-00014450-200,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Manaos Lima Limón,Gaseosa Lima Limón Manaos 2.25l,"$2.057,00",COTO,https://www.coto.com.ar/productos/gaseosa-lima-limon-manaos-2-25l-/_/R-00617703-00617703-200,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Arroz Gallo,Arroz Largo Fino Gallo 1 Kg,"$2.620,00",COTO,https://www.coto.com.ar/productos/arroz-largo-fino-gallo-1-kg-/_/R-00561452-00561452-200,2026-09-30,DISPONIBLE,1,kg
+compra_mes,Fideos Lucchetti,Fideos Tallarin N5 Lucchetti 500g,"$1.750,00",COTO,https://www.coto.com.ar/productos/fideos-tallarin-n5-lucchetti-500g-/_/R-00572005-00572005-200,2026-09-30,DISPONIBLE,500,g
+compra_mes,Leche Tregar,Leche Larga Vida Entera TREGAR Ttb 1 L,"$2.559,00",COTO,https://www.coto.com.ar/productos/leche-larga-vida-entera-tregar-ttb-1-l-/_/R-00262249-00262249-200,2026-09-30,DISPONIBLE,1,L
+compra_mes,Galletitas Criollitas,Galletitas Crackers CRIOLLITAS 300g,"$2.155,99",COTO,https://www.coto.com.ar/productos/galletitas-crackers-criollitas-300g-/_/R-00099168-00099168-200,2026-09-30,DISPONIBLE,300,g
+compra_mes,Coca Cola,Gaseosa Coca-Cola Sabor Original 2.25 Lt.,$ 5.900,Día %,https://diaonline.supermercadosdia.com.ar/gaseosa-coca-cola-sabor-original-225-lt-14837/p,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Manaos Lima Limón,"Gaseosa Manaos Lima Limón 2,25 Lts.",$ 2.400,Día %,https://diaonline.supermercadosdia.com.ar/gaseosa-manaos-lima-limon-225-lts-240197/p,2026-09-30,DISPONIBLE,2.25,L
+compra_mes,Arroz Gallo,No encontrado,N/D,Día %,https://diaonline.supermercadosdia.com.ar/arroz%20gallo%20largo%20fino%201%20kg?_q=Arroz%20Gallo%20Largo%20Fino%201%20kg&map=ft,2026-09-30,NO ENCONTRADO,1,kg
+compra_mes,Fideos Lucchetti,Fideos Tallarin N5 Luchetti 500 Gr.,$ 1.750,Día %,https://diaonline.supermercadosdia.com.ar/fideos-tallarin-n5-luchetti-500-gr-299670/p,2026-09-30,DISPONIBLE,500,g
+compra_mes,Leche Tregar,Leche Entera Tregar Larga Vida 1 Lt.,$ 2.550,Día %,https://diaonline.supermercadosdia.com.ar/leche-entera-tregar-larga-vida-1-lt-275781/p,2026-09-30,DISPONIBLE,1,L
+compra_mes,Galletitas Criollitas,Crackers Criollitas 300 Gr.,$ 1.979,Día %,https://diaonline.supermercadosdia.com.ar/crackers-criollitas-300-gr-308625/p,2026-09-30,DISPONIBLE,300,g
+individual,Fideos Lucchetti Tallarín N5 500 g,Fideos tallarin N5 Lucchetti 500 g.,"$ 1.749,00",Carrefour,https://www.carrefour.com.ar/fideos-tallarin-n5-lucchetti-500-g-726311/p,2026-09-30,DISPONIBLE,500,g
+individual,Fideos Lucchetti Tallarín N5 500 g,Fideos Tallarin N5 Lucchetti 500g,"$1.750,00",COTO,https://www.coto.com.ar/productos/fideos-tallarin-n5-lucchetti-500g-/_/R-00572005-00572005-200,2026-09-30,DISPONIBLE,500,g
+individual,Fideos Lucchetti Tallarín N5 500 g,Fideos Tallarin N5 Luchetti 500 Gr.,$ 1.100,Día %,https://diaonline.supermercadosdia.com.ar/fideos-tallarin-n5-luchetti-500-gr-299670/p,2026-09-30,DISPONIBLE,500,g
