@@ -45,6 +45,7 @@ URL_TELEGRAM = "https://web.telegram.org/a/"
 BUSCADOR = '//input[@id="telegram-search-input"]'
 ID_CAJA_DE_MENSAJE = "editable-message-text"
 CAJA_DE_MENSAJE = f'//div[@id="{ID_CAJA_DE_MENSAJE}"]'
+CAJA_DE_MENSAJE_ACTIVA = f'{CAJA_DE_MENSAJE}[@aria-disabled="false"]'
 BOTON_ENVIAR = '//button[contains(@class,"send") and contains(@class,"main-button")]'
 # la columna del chat abierto: la captura se recorta a esto para no mostrar
 # la lista de chats de la persona (nombres y vistas previas de otros mensajes)
@@ -73,6 +74,22 @@ def _resultado_de_busqueda(nombre_chat):
 
 class ErrorDelRobot(Exception):
     """El robot no pudo completar algún paso en Telegram Web."""
+
+
+def _iniciar_tagui():
+    # El motor antiguo de TagUI no entiende algunas directivas OpenSSL de Ubuntu.
+    if platform.system() != "Linux":
+        return r.init()
+
+    openssl_conf = os.environ.get("OPENSSL_CONF")
+    os.environ["OPENSSL_CONF"] = os.devnull
+    try:
+        return r.init()
+    finally:
+        if openssl_conf is None:
+            os.environ.pop("OPENSSL_CONF", None)
+        else:
+            os.environ["OPENSSL_CONF"] = openssl_conf
 
 
 def _esperar(elemento, segundos):
@@ -125,7 +142,7 @@ def _abrir_chat(nombre_chat):
     for _ in range(2):
         r.wait(1)  # que termine la animación de la lista antes de hacer click
         r.click(resultado)
-        if _esperar(CAJA_DE_MENSAJE, 8):
+        if _esperar(CAJA_DE_MENSAJE_ACTIVA, 8):
             return
     raise ErrorDelRobot(
         f"abrí «{nombre_chat}» pero no encontré dónde escribir. ¿La cuenta "
@@ -178,7 +195,7 @@ def enviar_por_telegram_web(nombre_chat, mensaje, segundos_para_iniciar_sesion=2
     Deja una captura de pantalla en captura.png y devuelve su ruta.
     Si algo falla lanza ErrorDelRobot con una explicación.
     """
-    if not r.init():
+    if not _iniciar_tagui():
         raise ErrorDelRobot("no se pudo iniciar TagUI ni abrir Chrome")
     try:
         _abrir_telegram(segundos_para_iniciar_sesion)
@@ -191,7 +208,7 @@ def enviar_por_telegram_web(nombre_chat, mensaje, segundos_para_iniciar_sesion=2
 
 
 def _iniciar_sesion_y_probar(nombre_chat=None):
-    if not r.init():
+    if not _iniciar_tagui():
         raise SystemExit("No se pudo iniciar TagUI ni abrir Chrome.")
     try:
         _abrir_telegram(segundos_para_iniciar_sesion=180)
