@@ -1,9 +1,21 @@
 // ===================================
-// BOT RPA TELEGRAM - ETAPA 1 
+// BOT RPA TELEGRAM - ETAPA 2
 // ===================================
+
+js carpeta_planilla = carpeta_escritorio()
+excel_visible = false
+js mostrar_planilla_al_registrar = true
+
+js var fs = require('fs'); fs.write('tagui_base.txt', flow_path, 'w');
+py import os, subprocess, sys
+py ruta_src = open('tagui_base.txt', encoding='utf-8').read().strip()
+py ruta_script = os.path.join(ruta_src, 'procesar_consulta.py')
+py ruta_salida = os.path.join(ruta_src, '..', 'salida.json')
 
 https://web.telegram.org/a/
 wait 8
+
+tagui flujos/preparar_planilla.tag
 
 echo Sesion lista. Monitoreando barra lateral...
 
@@ -18,47 +30,49 @@ for ciclo from 1 to infinity
         echo Chat detectado. Ingresando a la conversacion...
         wait 3
 
+        dom var titulo = document.querySelector('.MiddleHeader .ChatInfo .fullName, .MiddleHeader .ChatInfo .title, .chat-info .peer-title'); return JSON.stringify({ hash: window.location.hash, titulo: titulo ? titulo.textContent.trim() : '' });
+        js datos_chat = JSON.parse(dom_result || '{}'); chat_id = identificador_de_chat(datos_chat.hash, datos_chat.titulo);
+
         // 2. Extraer el texto entrante omitiendo horas y mensajes propios
         dom var nodos = document.querySelectorAll('.message-content, .text-content'); var txt = ''; for (var i = nodos.length - 1; i >= 0; i--) { if (!nodos[i].closest('.own, .is-out')) { var clone = nodos[i].cloneNode(true); var tiempos = clone.querySelectorAll('.time, .message-time, .date'); for (var j = 0; j < tiempos.length; j++) { tiempos[j].remove(); } txt = clone.innerText.replace(/(\r\n|\n|\r)/gm, ' ').trim(); break; } } return txt;
         mensaje_cliente = dom_result
 
-        echo Mensaje recibido: `mensaje_cliente`
+        echo Mensaje recibido en el chat `chat_id`: `mensaje_cliente`
 
         if mensaje_cliente != ""
-            // 1. Guardar mensaje recibido en in.txt 
-            dump `mensaje_cliente` to ../in.txt
+            js entrada = { evento: 'mensaje', chat_id: chat_id, mensaje: mensaje_cliente, inscriptos: null };
+            tagui flujos/consultar_python.tag
 
-            // 2. Ejecutar el script Python con el motor "py" de TagUI.
-            js var fs = require('fs'); fs.write('tagui_base.txt', flow_path);
-            py base2 = open('tagui_base.txt').read().strip()
-            py import subprocess, os
-            py os.path.exists(base2 + '/../out.txt') and os.remove(base2 + '/../out.txt')
-            py subprocess.run(['python', base2 + '/procesar_consulta.py'], check=False)
-            echo Respuesta generada por Python.
+            if accion == "leer_planilla"
+                tagui flujos/leer_planilla.tag
+                js entrada.inscriptos = inscriptos
+                tagui flujos/consultar_python.tag
 
-            // 3. Codificar out.txt en base64 para inyectarlo sin problemas de comillas/saltos
-            py import base64
-            py b64 = base64.b64encode(open(base2 + '/../out.txt', 'rb').read()).decode()
-            py print(b64)
+            if accion == "registrar"
+                tagui flujos/registrar_en_planilla.tag
+                js entrada = { evento: registro_guardado ? 'registro_ok' : 'registro_fallido', chat_id: chat_id, mensaje: '', numero: numero_preinscripcion, inscriptos: null };
+                tagui flujos/consultar_python.tag
 
+            if respuesta_b64 != ""
+                js var expr = "(function(){var b=atob(" + JSON.stringify(respuesta_b64) + ");var u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);var t=new TextDecoder('utf-8').decode(u);var el=document.querySelector('.ProseMirror, .input-message-input[contenteditable=\"true\"], div[contenteditable=\"true\"], textarea');if(!el)return 'NO_INPUT';el.focus();var ok=false;if(document.execCommand){ok=document.execCommand('insertText',false,t);}if(!ok||el.innerText.trim()===''){el.innerText=t;el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:t}));}return 'INSERT:'+ok+':'+t.length;})()";
+                js estado_insert = chrome_step('Runtime.evaluate',{expression: expr});
+                echo Estado de la insercion: `estado_insert`
 
-            js var expr = "(function(){var b=atob(" + JSON.stringify(py_result) + ");var u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);var t=new TextDecoder('utf-8').decode(u);var el=document.querySelector('.ProseMirror, .input-message-input[contenteditable=\"true\"], div[contenteditable=\"true\"], textarea');if(!el)return 'NO_INPUT';el.focus();var ok=false;if(document.execCommand){ok=document.execCommand('insertText',false,t);}if(!ok||el.innerText.trim()===''){el.innerText=t;el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:t}));}return 'INSERT:'+ok+':'+t.length;})()";
-            js estado_insert = chrome_step('Runtime.evaluate',{expression: expr});
-            echo Estado de la insercion: `estado_insert`
+                // 3. Enviar con Enter confiable via CDP (evento real del navegador).
+                js chrome_step('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\r', unmodifiedText: '\r'});
+                js chrome_step('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13});
+                wait 2
 
-            // 4. Enviar con Enter confiable via CDP (evento real del navegador).
-            js chrome_step('Input.dispatchKeyEvent', {type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\r', unmodifiedText: '\r'});
-            js chrome_step('Input.dispatchKeyEvent', {type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13});
-            wait 2
-
-            if estado_insert contains "INSERT:true"
-                echo Mensaje despachado al usuario correctamente.
+                if estado_insert contains "INSERT:true"
+                    echo Mensaje despachado al usuario correctamente.
+                else
+                    echo ALERTA: No se pudo insertar la respuesta en la caja de texto.
             else
-                echo ALERTA: No se pudo insertar la respuesta en la caja de texto.
+                echo Sin respuesta para enviar (mensaje propio del bot o sin texto).
         else
             echo Chat sin contenido valido para responder.
 
-        // 5. Salir del chat: Clic en el fondo neutro para liberar foco y deseleccionar
+        // 4. Salir del chat: Clic en el fondo neutro para liberar foco y deseleccionar
         dom var fondo = document.querySelector('.messages-container, .bubbles, .chat-background') || document.body; fondo.dispatchEvent(new MouseEvent('click', { bubbles: true })); document.activeElement.blur();
         wait 1
         // Escape via CDP (reemplaza 'keyboard [esc]', que usa SikuliX y se cuelga con Java 32 bits)

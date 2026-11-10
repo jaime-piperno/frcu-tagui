@@ -1,8 +1,14 @@
-import sys
-import csv
-import os
+import base64
+import copy
 import difflib
-from datetime import datetime
+import json
+import os
+import re
+from datetime import datetime, timedelta
+
+import preinscripcion
+from cursos import armar_menu, cargar_cursos, detectar_curso, formatear_curso
+from texto import normalizar, palabras
 
 # Rutas absolutas calculadas respecto a este archivo (src/)
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -10,183 +16,172 @@ ROOT_DIR = os.path.abspath(os.path.join(SRC_DIR, ".."))
 
 LOG_FILE = os.path.join(ROOT_DIR, "bot.log")
 CSV_PATH = os.path.join(ROOT_DIR, "data", "cursos.csv")
-PATH_IN = os.path.join(ROOT_DIR, "in.txt")
-PATH_OUT = os.path.join(ROOT_DIR, "out.txt")
+SESIONES_PATH = os.path.join(ROOT_DIR, "data", "sesiones.json")
+PATH_ENTRADA = os.path.join(ROOT_DIR, "entrada.json")
+PATH_SALIDA = os.path.join(ROOT_DIR, "salida.json")
 
-def registrar_log(tipo, entrada, salida):
+DURACION_SESION = timedelta(minutes=30)
+
+PALABRAS_SALUDO = ["hola", "buen dia", "buenas", "buenas tardes", "buenas noches", "inicio", "start",
+                   "ayuda", "menu", "cursos"]
+PALABRAS_DESPEDIDA = ["adios", "chau", "chao", "chaooo", "bye", "nos vemos", "nos vemos pronto",
+                      "hasta luego", "hasta pronto", "gracias", "muchas gracias"]
+
+CONTENIDO_NO_SOPORTADO = re.compile(r"^\d{1,2}:\d{2}$|this message is not supported|^null$", re.IGNORECASE)
+
+MENSAJE_DESPEDIDA = "👋 ¡Gracias por tu consulta! Nos vemos pronto."
+MENSAJE_NO_RECONOCIDO = (
+    "No logré identificar el curso solicitado.\n\n"
+    "Escribí 'MENU' para revisar los cursos disponibles o verificá la palabra ingresada."
+)
+
+
+def registrar_log(tipo, chat_id, entrada, salida):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
         with open(LOG_FILE, mode="a", encoding="utf-8") as f:
-            f.write(f"[{timestamp}] [{tipo}] IN: '{entrada}' | OUT: '{salida.replace(chr(10), ' ')}'\n")
+            f.write(f"[{timestamp}] [{tipo}] CHAT: '{chat_id}' | IN: '{entrada}' | "
+                    f"OUT: '{salida.replace(chr(10), ' ')}'\n")
     except Exception:
         pass
 
-def obtener_menu_bienvenida():
-    return (
-        "👋 ¡Hola! Bienvenido/a al Asistente de Cursos.\n\n"
-        "Estoy acá para ayudarte a consultar nuestra oferta de cursos de forma rápida y sencilla.\n\n"
-        "📚 Estos son los cursos disponibles:\n\n"
-        "• Peluquería y Estilismo\n"
-        "• Programación\n"
-        "• Maquillaje Profesional\n"
-        "• Barbería Clásica\n"
-        "• Cocina Profesional\n"
-        "• Repostería Creativa\n"
-        "• Inglés Conversacional\n"
-        "• Fotografía Digital\n"
-        "• Yoga y Relajación\n"
-        "• Carpintería de Muebles\n"
-        "• Electrónica Básica\n"
-        "• Robótica para Niños\n"
-        "• Guitarra y Música\n"
-        "• Dibujo y Pintura\n"
-        "• Marketing Digital\n"
-        "• Diseño Gráfico\n"
-        "• Mecánica de Motos\n"
-        "• Huerta y Jardinería\n\n"
-        "Escribí el nombre del curso que te interesa y te paso los detalles."
-    )
 
-def formatear_curso(data):
-    return (
-        f"Curso: {data.get('curso', '')}\n"
-        f"• Docente: {data.get('docente', '')}\n"
-        f"• Días: {data.get('dias', '')}\n"
-        f"• Horario: {data.get('horario', '')} hs\n"
-        f"• Arancel: {data.get('precio', '')}\n"
-        f"• Detalle: {data.get('descripcion', '')}"
-    )
+def _contiene_frase(texto_normalizado, frases):
+    return any(re.search(rf"\b{re.escape(frase)}\b", texto_normalizado) for frase in frases)
 
-def procesar_consulta(texto_crudo):
-    consulta = texto_crudo.strip().lower()
 
-    if not consulta:
-        res = "No detecté texto en tu mensaje. Escribí 'menu' o el nombre de un curso."
-        registrar_log("WARN_VACIO", texto_crudo, res)
-        return res
-
-    palabras_saludo = ["hola", "buen dia", "buenas", "buenas tardes", "buenas noches", "inicio", "/start", "ayuda", "menu", "menú", "cursos"]
-    # Despedidas
-    palabras_despedida = ["adios", "adiós", "chau", "chao", "chaooo", "bye", "nos vemos", "nos vemos pronto", "hasta luego", "hasta pronto", "gracias", "muchas gracias"]
-    # Coincidencia directa o por substring (despedidas primero)
-    if any(s in consulta for s in palabras_despedida):
-        res = "👋 ¡Gracias por tu consulta! Nos vemos pronto."
-        registrar_log("INFO_DESPEDIDA", texto_crudo, res)
-        return res
-    # Coincidencia directa o por substring (saludos/menu)
-    if any(s in consulta for s in palabras_saludo):
-        res = obtener_menu_bienvenida()
-        registrar_log("INFO_MENU", texto_crudo, res)
-        return res
-    # Fuzzy para capturar variantes con errores tipográficos (mnu, meni, meny, menuu, mnú, etc.)
-    tokens_menu = consulta.split()
-    candidatos_menu = ["menu", "menú", "cursos", "ayuda"]
-    for t in tokens_menu:
-        if len(t) < 2:
+def _parecida(texto_normalizado, candidatas, cutoff):
+    mejor = 0.0
+    for palabra in palabras(texto_normalizado):
+        if len(palabra) < 3:
             continue
-        matches_m = difflib.get_close_matches(t, candidatos_menu, n=1, cutoff=0.6)
-        if matches_m:
-            ratio_m = difflib.SequenceMatcher(None, t, matches_m[0]).ratio()
-            if ratio_m >= 0.7:  # umbral razonable para 3-4 letras
-                res = obtener_menu_bienvenida()
-                registrar_log(f"INFO_MENU_FUZZY_{ratio_m:.2f}", texto_crudo, res)
-                return res
-    # También intentar contra la lista completa de saludos con cutoff suave
-    for t in tokens_menu:
-        matches_m2 = difflib.get_close_matches(t, palabras_saludo, n=1, cutoff=0.65)
-        if matches_m2:
-            ratio_m2 = difflib.SequenceMatcher(None, t, matches_m2[0]).ratio()
-            if ratio_m2 >= 0.7:
-                res = obtener_menu_bienvenida()
-                registrar_log(f"INFO_MENU_FUZZY2_{ratio_m2:.2f}", texto_crudo, res)
-                return res
-    # Fuzzy para despedidas
-    for t in tokens_menu:
-        matches_d = difflib.get_close_matches(t, ["adios", "adiós", "chau", "chao", "bye", "gracias"], n=1, cutoff=0.65)
-        if matches_d:
-            ratio_d = difflib.SequenceMatcher(None, t, matches_d[0]).ratio()
-            if ratio_d >= 0.7:
-                res = "👋 ¡Gracias por tu consulta! Nos vemos pronto."
-                registrar_log(f"INFO_DESPEDIDA_FUZZY_{ratio_d:.2f}", texto_crudo, res)
-                return res
-    # Despedidas con frases completas
-    if "nos vemos" in consulta or "hasta luego" in consulta or "hasta pronto" in consulta:
-        res = "👋 ¡Gracias por tu consulta! Nos vemos pronto."
-        registrar_log("INFO_DESPEDIDA_FR", texto_crudo, res)
-        return res
+        parecidas = difflib.get_close_matches(palabra, candidatas, n=1, cutoff=cutoff)
+        if parecidas:
+            mejor = max(mejor, difflib.SequenceMatcher(None, palabra, parecidas[0]).ratio())
+    return mejor
 
-    if not os.path.exists(CSV_PATH):
-        res = "Error interno: La base de datos de cursos no se encuentra disponible."
-        registrar_log("ERROR_CSV_FALTA", texto_crudo, res)
-        return res
 
-    cursos = {}
-    try:
-        with open(CSV_PATH, mode="r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row.get("keyword"):
-                    cursos[row["keyword"].strip().lower()] = row
-    except Exception as e:
-        res = f"Error al leer la base de datos: {str(e)}"
-        registrar_log("ERROR_CSV_LECTURA", texto_crudo, res)
-        return res
+def es_despedida(texto_normalizado):
+    return (_contiene_frase(texto_normalizado, PALABRAS_DESPEDIDA)
+            or _parecida(texto_normalizado, ["adios", "chau", "chao", "bye", "gracias"], 0.65) >= 0.7)
 
-    # 1. Coincidencia directa
-    for kw, datos in cursos.items():
-        if kw in consulta:
-            res = formatear_curso(datos)
-            registrar_log("EXITO_DIRECTO", texto_crudo, res)
-            return res
 
-    # 2. Fuzzy Matching
-    tokens = consulta.split()
-    claves = list(cursos.keys())
-    mejor_match = None
-    mejor_ratio = 0.0
+def es_saludo(texto_normalizado):
+    return (_contiene_frase(texto_normalizado, PALABRAS_SALUDO)
+            or _parecida(texto_normalizado, ["menu", "cursos", "ayuda"], 0.6) >= 0.7
+            or _parecida(texto_normalizado, PALABRAS_SALUDO, 0.65) >= 0.7)
 
-    for t in tokens:
-        matches = difflib.get_close_matches(t, claves, n=1, cutoff=0.6)
-        if matches:
-            candidato = matches[0]
-            ratio = difflib.SequenceMatcher(None, t, candidato).ratio()
-            if ratio > mejor_ratio:
-                mejor_ratio = ratio
-                mejor_match = candidato
 
-    if mejor_match:
-        if mejor_ratio >= 0.75:
-            res = f"*(Inferí que consultaste por '{mejor_match.capitalize()}')*\n\n" + formatear_curso(cursos[mejor_match])
-            registrar_log(f"EXITO_FUZZY_{mejor_ratio:.2f}", texto_crudo, res)
-            return res
+def _resultado(respuesta, tipo):
+    return {"accion": "", "respuesta": respuesta, "tipo": tipo}
+
+
+def responder_consulta(sesion, texto_normalizado, cursos, inscriptos):
+    if preinscripcion.es_pedido_de_inscripcion(texto_normalizado):
+        return preinscripcion.iniciar(sesion, texto_normalizado, cursos, inscriptos)
+
+    deteccion = detectar_curso(texto_normalizado, cursos)
+    if deteccion and deteccion["tipo"] in ("directo", "inferido"):
+        if inscriptos is None:
+            return preinscripcion.NECESITA_PLANILLA
+        curso = deteccion["curso"]
+        sesion["ultimo_curso"] = curso["codigo"]
+        inferido = deteccion["tipo"] == "inferido"
+        tipo = f"EXITO_FUZZY_{deteccion['similitud']:.2f}" if inferido else "EXITO_DIRECTO"
+        return _resultado(formatear_curso(curso, inscriptos, inferido), tipo)
+
+    if es_despedida(texto_normalizado):
+        return _resultado(MENSAJE_DESPEDIDA, "INFO_DESPEDIDA")
+    if es_saludo(texto_normalizado):
+        return _resultado(armar_menu(cursos), "INFO_MENU")
+    if deteccion:
+        nombre = deteccion["curso"].get("curso", "")
+        return _resultado(f"¿Quisiste consultar por '{nombre}'? Escribilo para confirmar.",
+                          f"SUGERENCIA_{deteccion['similitud']:.2f}")
+    return _resultado(MENSAJE_NO_RECONOCIDO, "NO_RECONOCIDO")
+
+
+def procesar(entrada, sesion, cursos, ahora):
+    sesion = copy.deepcopy(sesion or {})
+    actualizado = sesion.get("actualizado")
+    if actualizado and ahora - datetime.fromisoformat(actualizado) > DURACION_SESION:
+        sesion = {}
+
+    evento = entrada.get("evento") or "mensaje"
+    inscriptos = entrada.get("inscriptos")
+
+    if evento in ("registro_ok", "registro_fallido"):
+        resultado = preinscripcion.resultado_registro(sesion, evento == "registro_ok", entrada.get("numero"), cursos)
+    else:
+        texto = (entrada.get("mensaje") or "").strip()
+        texto_normalizado = normalizar(texto)
+        ultima = sesion.get("ultima_respuesta")
+        if texto_normalizado and ultima and texto_normalizado == normalizar(ultima):
+            resultado = _resultado("", "IGNORADO_PROPIO")
+        elif not texto_normalizado:
+            resultado = _resultado("No detecté texto en tu mensaje. Escribí 'MENU' o el nombre de un curso.", "WARN_VACIO")
+        elif CONTENIDO_NO_SOPORTADO.search(texto):
+            respuesta = "Por ahora solo puedo leer mensajes de texto 🙂"
+            pregunta = preinscripcion.pregunta_actual(sesion)
+            respuesta += f"\n\n{pregunta}" if pregunta else "\n\nEscribí 'MENU' para ver los cursos."
+            resultado = _resultado(respuesta, "CONTENIDO_NO_SOPORTADO")
+        elif preinscripcion.en_curso(sesion):
+            resultado = preinscripcion.continuar(sesion, texto, texto_normalizado, cursos, inscriptos)
         else:
-            res = f"¿Quisiste consultar por '{mejor_match.capitalize()}'? Escribilo para confirmar."
-            registrar_log(f"SUGERENCIA_{mejor_ratio:.2f}", texto_crudo, res)
-            return res
+            resultado = responder_consulta(sesion, texto_normalizado, cursos, inscriptos)
 
-    # 3. No reconocido
-    res = (
-        "No logré identificar el curso solicitado.\n\n"
-        "Escribí 'menu' para revisar los cursos disponibles o verificá la palabra ingresada."
-    )
-    registrar_log("NO_RECONOCIDO", texto_crudo, res)
-    return res
+    salida = dict(resultado)
+    if salida["accion"] != "leer_planilla":
+        sesion["actualizado"] = ahora.isoformat(timespec="seconds")
+        if salida["respuesta"]:
+            sesion["ultima_respuesta"] = salida["respuesta"]
+    return salida, sesion
+
+
+def _leer_json(ruta, por_defecto):
+    try:
+        with open(ruta, mode="r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return por_defecto
+
+
+def _escribir_json(ruta, datos):
+    temporal = ruta + ".tmp"
+    with open(temporal, mode="w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=True)
+    os.replace(temporal, ruta)
+
+
+def main():
+    entrada = _leer_json(PATH_ENTRADA, {})
+    chat_id = str(entrada.get("chat_id") or "")
+    ahora = datetime.now()
+
+    try:
+        cursos = cargar_cursos(CSV_PATH)
+    except FileNotFoundError:
+        cursos = None
+        salida = _resultado("Error interno: La base de datos de cursos no se encuentra disponible.", "ERROR_CSV_FALTA")
+    except Exception as e:
+        cursos = None
+        salida = _resultado(f"Error al leer la base de datos: {e}", "ERROR_CSV_LECTURA")
+
+    if cursos is not None:
+        sesiones = _leer_json(SESIONES_PATH, {})
+        sesiones = {cid: s for cid, s in sesiones.items()
+                    if ahora - datetime.fromisoformat(s.get("actualizado", ahora.isoformat())) <= DURACION_SESION}
+        salida, sesion = procesar(entrada, sesiones.get(chat_id), cursos, ahora)
+        if salida["accion"] != "leer_planilla" and chat_id:
+            sesiones[chat_id] = sesion
+            _escribir_json(SESIONES_PATH, sesiones)
+
+    if salida["accion"] != "leer_planilla":
+        registrar_log(salida["tipo"], chat_id, entrada.get("mensaje") or entrada.get("evento", ""), salida["respuesta"])
+
+    salida["respuesta_b64"] = base64.b64encode(salida["respuesta"].encode("utf-8")).decode("ascii")
+    _escribir_json(PATH_SALIDA, salida)
+
 
 if __name__ == "__main__":
-    texto_recibido = ""
-
-    # Lectura obligatoria con codificación UTF-8 (prioriza la raíz; fallback en src/)
-    for ruta_in in (PATH_IN, os.path.join(SRC_DIR, "in.txt")):
-        if os.path.exists(ruta_in):
-            try:
-                with open(ruta_in, mode="r", encoding="utf-8") as f_in:
-                    texto_recibido = f_in.read()
-            except Exception:
-                texto_recibido = ""
-            break
-
-    salida = procesar_consulta(texto_recibido)
-
-    # Escritura asegurada en out.txt en UTF-8
-    with open(PATH_OUT, mode="w", encoding="utf-8") as f_out:
-        f_out.write(salida)
+    main()
