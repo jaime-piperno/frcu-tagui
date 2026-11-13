@@ -1,0 +1,23 @@
+# TagUI temporales y perfiles (del .gitignore original del grupo 4)
+tagui.log
+*.raw
+# El original ignoraba *.js; se limita a los .js que genera TagUI para no ignorar src/tagui_local.js
+*.tag.js
+chrome_profile/
+src/tagui_base.txt
+__pycache__/
+*.pyc
+bot.log
+# Ignorar archivos de log
+*.log
+logs/
+
+# Archivos de intercambio entre TagUI y Python, y estado de las conversaciones
+entrada.json
+salida.json
+data/sesiones.json
+*.tmp
+
+# Archivos de intercambio de la versión anterior (Etapa 1)
+in.txt
+out.txt
