@@ -8,6 +8,7 @@
 
 import csv
 import math
+import re
 import unicodedata
 from pathlib import Path
 
@@ -65,6 +66,7 @@ def menu_semanal():
     return [(fila[0], fila[1]) for fila in _leer_csv("Menu.csv")]
 
 
+# Guarda el menú semanal en el archivo CSV.
 def guardar_menu(dias_y_comidas):
     _escribir_csv("Menu.csv", ["Dia", "Comida"], dias_y_comidas)
 
@@ -81,6 +83,7 @@ def ingredientes_de(comida):
 UNIDADES = ("kg", "lt", "unidad")
 
 
+# Escribe los encabezados y las filas en un archivo CSV.
 def _escribir_csv(nombre, encabezados, filas):
     # se reescribe el archivo entero: así queda prolijo aunque el original no
     # termine en salto de línea
@@ -156,6 +159,47 @@ def interpretar_ingrediente(renglon, permitir_cero=False):
     return nombre, cantidad, unidad
 
 
+def interpretar_respuesta_factura(respuesta):
+    """Valida renglones devueltos por la IA y separa los que no se pudieron cargar."""
+    ingredientes = []
+    rechazados = []
+    for renglon in respuesta.splitlines():
+        texto = renglon.strip()
+        if not texto or texto.startswith("```"):
+            continue
+        texto = texto.lstrip("-*• \t").strip()
+        if not texto:
+            continue
+        texto = re.sub(
+            r"^gemini\s+(?:ha\s+dicho|dijo|dice|said|says)\s*[:,.-]?\s*",
+            "",
+            texto,
+            flags=re.IGNORECASE,
+        )
+        try:
+            ingredientes.append(interpretar_ingrediente(texto))
+            continue
+        except ErrorDeDatos:
+            pass
+
+        cantidad_primero = re.match(
+            r"^(\d+(?:[.,]\d+)?)\s+(kg|lt|unidad(?:es)?)\s+(.+)$",
+            texto,
+            flags=re.IGNORECASE,
+        )
+        if cantidad_primero:
+            cantidad, unidad, nombre = cantidad_primero.groups()
+            unidad = "unidad" if unidad.lower().startswith("unidad") else unidad.lower()
+            normalizado = f"{nombre.strip()}, {cantidad.replace(',', '.')}, {unidad}"
+            try:
+                ingredientes.append(interpretar_ingrediente(normalizado))
+                continue
+            except ErrorDeDatos:
+                pass
+        rechazados.append(renglon.strip())
+    return ingredientes, rechazados
+
+
 def agregar_receta(comida, ingredientes):
     """Suma la comida nueva al final de BaseDatos.csv. `ingredientes`: lista de (nombre, cantidad, unidad)."""
     if comida_existente(comida):
@@ -175,6 +219,53 @@ def stock_actual():
             for fila in _leer_csv("StockActual.csv")]
 
 
+def faltantes_para_receta(comida):
+    """Devuelve ingredientes y cantidades que faltan para preparar una receta."""
+    receta = ingredientes_de(comida)
+    if not receta:
+        raise ErrorDeDatos(f"No hay ingredientes cargados para «{comida}».")
+
+    necesarios = {}
+    for numero_fila, (nombre, cantidad, unidad) in enumerate(receta, start=1):
+        clave = normalizar(nombre)
+        cantidad = _a_numero(cantidad, "BaseDatos.csv", numero_fila)
+        if clave in necesarios and necesarios[clave][2] != unidad:
+            raise ErrorDeDatos(f"{nombre} aparece con unidades incompatibles en la receta.")
+        if clave in necesarios:
+            necesarios[clave][1] += cantidad
+        else:
+            necesarios[clave] = [nombre, cantidad, unidad]
+
+    disponibles = {}
+    for numero_fila, (nombre, cantidad, unidad) in enumerate(stock_actual(), start=1):
+        clave = normalizar(nombre)
+        cantidad = _a_numero(cantidad, "StockActual.csv", numero_fila)
+        if clave in disponibles:
+            if disponibles[clave][1] != unidad:
+                raise ErrorDeDatos(f"{nombre} aparece con unidades incompatibles en la alacena.")
+            disponibles[clave][0] += cantidad
+        else:
+            disponibles[clave] = [cantidad, unidad]
+
+    faltantes = []
+    for clave, (nombre, cantidad, unidad) in necesarios.items():
+        cantidad_disponible, unidad_disponible = disponibles.get(clave, (0, unidad))
+        if unidad_disponible != unidad:
+            raise ErrorDeDatos(
+                f"{nombre} se receta en {unidad}, pero la alacena lo tiene en {unidad_disponible}."
+            )
+        faltante = round(cantidad - cantidad_disponible, 6)
+        if faltante <= 0:
+            continue
+        if unidad == "unidad":
+            faltante = math.ceil(faltante)
+        else:
+            faltante = round(faltante, 2)
+        faltantes.append((nombre, faltante, unidad))
+    return faltantes
+
+
+# Indica si un ingrediente aparece en alguna receta.
 def se_usa_en_recetas(ingrediente):
     return any(normalizar(fila[1]) == normalizar(ingrediente) for fila in _leer_csv("BaseDatos.csv"))
 
@@ -191,6 +282,52 @@ def actualizar_stock(cambios):
         else:
             stock[normalizar(nombre)] = [nombre, formatear_cantidad(cantidad), unidad]
     _escribir_csv("StockActual.csv", ["Ingrediente", "CantidadDisponible", "Unidad"], stock.values())
+
+
+def stock_despues_de_sumar(compras_recibidas):
+    """Calcula el stock resultante de una compra sin modificar el CSV."""
+    stock = {
+        normalizar(nombre): [nombre, float(cantidad), unidad]
+        for nombre, cantidad, unidad in stock_actual()
+    }
+    for nombre, cantidad, unidad in compras_recibidas:
+        nombre, cantidad, unidad = interpretar_ingrediente(
+            f"{nombre}, {cantidad}, {unidad}"
+        )
+        clave = normalizar(nombre)
+        if clave in stock:
+            existente = stock[clave]
+            if existente[2] != unidad:
+                raise ErrorDeDatos(
+                    f"{nombre} ya está en {existente[2]}, no se puede sumar en {unidad}"
+                )
+            existente[1] = round(existente[1] + float(cantidad), 6)
+        else:
+            stock[clave] = [nombre, round(float(cantidad), 6), unidad]
+
+    return [
+        (nombre, round(cantidad, 6), unidad)
+        for nombre, cantidad, unidad in stock.values()
+    ]
+
+
+def stock_proyectado_de_compra(compras_recibidas):
+    """Devuelve solo los productos comprados, con su cantidad final proyectada."""
+    afectados = {normalizar(nombre) for nombre, _, _ in compras_recibidas}
+    return [
+        ingrediente
+        for ingrediente in stock_despues_de_sumar(compras_recibidas)
+        if normalizar(ingrediente[0]) in afectados
+    ]
+
+
+def sumar_al_stock(compras_recibidas):
+    """Suma productos confirmados de una factura al stock existente."""
+    filas = [
+        [nombre, formatear_cantidad(cantidad), unidad]
+        for nombre, cantidad, unidad in stock_despues_de_sumar(compras_recibidas)
+    ]
+    _escribir_csv("StockActual.csv", ["Ingrediente", "CantidadDisponible", "Unidad"], filas)
 
 
 def calcular_lista(seleccionadas):
@@ -251,11 +388,13 @@ def calcular_lista(seleccionadas):
     return faltantes, advertencias
 
 
+# Convierte una cantidad a texto sin decimales innecesarios.
 def formatear_cantidad(cantidad):
     # 1.0 -> "1", 0.5 -> "0.5"
     return str(int(cantidad)) if cantidad == int(cantidad) else str(cantidad)
 
 
+# Genera el texto de la lista de compras.
 def armar_mensaje(faltantes):
     lineas = ["Lista de compras:"]
     for ingrediente, cantidad, unidad in faltantes:

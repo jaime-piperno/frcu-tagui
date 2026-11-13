@@ -19,32 +19,36 @@
 #   internet: alcanza con que la PC tenga conexión.
 
 import random
-import subprocess
-import sys
+import shutil
+import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 
 import requests
 
 #Traemos los modulos de compras y robot_telegram_web para poder usar sus funciones
 import compras
-import robot_telegram_web
+import procesamiento
+import procesador_factura
 from configuracion import leer_config
 
-#leemos la configuracion del archivo config.txt para obtener el token del bot, el chat_id permitido y el nombre del grupo de telegram
-CONFIG = leer_config()
-API = f"https://api.telegram.org/bot{CONFIG['TELEGRAM_TOKEN']}/"
-CHAT_PERMITIDO = int(CONFIG["TELEGRAM_CHAT_ID"])
-GRUPO = CONFIG["GRUPO_TELEGRAM"]
-
-ROBOT = Path(__file__).resolve().parent / "robot_telegram_web.py"
-# Si el robot tarda más que esto, se da por colgado (una corrida normal
-# tarda menos de un minuto)
-MINUTOS_MAXIMOS_ROBOT = 3
+# La configuración se carga en main(), no al importar el módulo, para poder
+# probar la interfaz sin credenciales ni conexiones a Telegram.
+API = None
+API_ARCHIVOS = None
+CHAT_PERMITIDO = None
+GRUPO = ""
+CARPETA_EVIDENCIA_FACTURAS = (
+    Path(__file__).resolve().parent.parent / "docs" / "evidencia" / "facturas"
+)
 
 # Estado de cada menú de botones abierto, por (chat_id, message_id):
 #   {"modo": "principal" | "una" | "varias", "elegidas": [...]}
 menus = {}
+esperando_foto_factura = set()
+fotos_factura = {}
+confirmaciones_factura = {}
 
 
 # LLAMADAS A LA BOT API
@@ -89,6 +93,7 @@ def botones_principales():
         [{"text": "📖 Ver recetas", "callback_data": "recetas"},
          {"text": "➕ Cargar receta", "callback_data": "cargar"}],
         [{"text": "🥫 Mi alacena", "callback_data": "alacena"}],
+        [{"text": "🧾 Cargar factura", "callback_data": "factura:nueva"}],
     ]
 
 #Esta función devuelve los botones para elegir comidas según el modo (una, varias, recetas o día) y la lista de comidas disponibles
@@ -157,6 +162,9 @@ def atender_boton(consulta):
     dato = consulta["data"]
     llamar("answerCallbackQuery", callback_query_id=consulta["id"])
 
+    if dato.startswith("factura:"):
+        atender_boton_de_factura(chat_id, message_id, dato)
+        return
     if dato.startswith("carga:"):
         atender_boton_de_carga(chat_id, message_id, dato)
         return
@@ -172,7 +180,7 @@ def atender_boton(consulta):
 
     comidas = compras.comidas_disponibles()
 
-    if dato == "volver":
+    if dato in ("volver", "inicio"):
         menu.update(modo="principal", elegidas=[])
         editar(chat_id, message_id, "¿Qué querés hacer?", botones_principales())
     elif dato == "modo:una":
@@ -227,13 +235,49 @@ def atender_boton(consulta):
     # --- ver las recetas cargadas ---
     elif dato == "recetas":
         menu["modo"] = "recetas"
+        botones_recetas = botones_de_comidas("recetas", comidas)
+        # Insertar botón de resumen antes del "Volver"
+        botones_recetas.insert(-1, [{"text": "📋 Resumen de todas", "callback_data": "recetas:resumen"}])
         editar(chat_id, message_id,
                f"Hay {len(comidas)} recetas cargadas. Tocá una para ver sus ingredientes.",
-               botones_de_comidas("recetas", comidas))
+               botones_recetas)
+    elif dato == "recetas:resumen":
+        mostrar_resumen_recetas(chat_id, message_id, comidas)
     elif dato.startswith("ver:"):
         comida = comidas[int(dato.split(":")[1])]
-        editar(chat_id, message_id, texto_receta(comida),
-               [[{"text": "⬅ Volver al listado", "callback_data": "recetas"}]])
+        menu["comida_actual"] = comida
+        editar(
+            chat_id, message_id, texto_receta(comida),
+            [[{"text": "🥘 ¿Tengo todo?", "callback_data": "receta:disponibilidad"}],
+             [{"text": "⬅ Volver al listado", "callback_data": "recetas"},
+              {"text": "🏠 Menú", "callback_data": "inicio"}]],
+        )
+    elif dato == "receta:disponibilidad":
+        comida = menu.get("comida_actual")
+        if not comida:
+            editar(chat_id, message_id, "Elegí una receta para revisar sus ingredientes.",
+                   botones_de_comidas("recetas", comidas))
+            return
+        try:
+            faltantes = compras.faltantes_para_receta(comida)
+        except compras.ErrorDeDatos as error:
+            editar(chat_id, message_id, f"⚠ No pude revisar la receta: {error}")
+            return
+        if faltantes:
+            renglones = [
+                f"- {nombre}: {compras.formatear_cantidad(cantidad)} {unidad}"
+                for nombre, cantidad, unidad in faltantes
+            ]
+            texto = f"Para {comida} te falta:\n\n" + "\n".join(renglones)
+        else:
+            texto = f"✅ Tenés todos los ingredientes para {comida}."
+        indice = comidas.index(comida)
+        editar(
+            chat_id, message_id, texto,
+            [[{"text": "⬅ Ver receta", "callback_data": f"ver:{indice}"}],
+             [{"text": "📖 Otra receta", "callback_data": "recetas"},
+              {"text": "🏠 Menú", "callback_data": "inicio"}]],
+        )
 
     # --- cargar una receta nueva ---
     elif dato == "cargar":
@@ -243,11 +287,275 @@ def atender_boton(consulta):
     # --- la alacena: verla y actualizarla ---
     elif dato == "alacena":
         editar(chat_id, message_id, texto_alacena(),
-               [[{"text": "✏ Actualizar", "callback_data": "alacena:actualizar"},
+               [[{"text": "✏ Actualizar", "callback_data": "alacena:actualizar"}],
+                [{"text": "📖 Ver recetas", "callback_data": "recetas"},
                  {"text": "⬅ Volver", "callback_data": "volver"}]])
     elif dato == "alacena:actualizar":
         del menus[(chat_id, message_id)]
         empezar_edicion_alacena(chat_id, message_id)
+
+
+# Filtro de recetas según la disponibilidad de sus ingredientes.
+def mostrar_resumen_recetas(chat_id, message_id, comidas):
+    """Muestra un resumen de todas las recetas: cuáles se pueden hacer y cuáles no."""
+    completas = []
+    incompletas = []
+    for comida in comidas:
+        try:
+            faltantes = compras.faltantes_para_receta(comida)
+        except compras.ErrorDeDatos:
+            incompletas.append(f"⚠ {comida}: no se pudo revisar")
+            continue
+        if not faltantes:
+            completas.append(f"✅ {comida}")
+        else:
+            detalles = ", ".join(
+                f"{compras.formatear_cantidad(cant)} {unid} de {nombre}"
+                for nombre, cant, unid in faltantes
+            )
+            incompletas.append(f"❌ {comida}: te falta {detalles}")
+    partes = []
+    if completas:
+        partes.append("🟢 Podés hacer:\n" + "\n".join(completas))
+    if incompletas:
+        partes.append("🔴 Te falta algo para:\n" + "\n".join(incompletas))
+    if not completas and not incompletas:
+        partes.append("No hay recetas cargadas.")
+    texto = "\n\n".join(partes)
+    editar(
+        chat_id, message_id, texto,
+        [[{"text": "📖 Ver recetas", "callback_data": "recetas"},
+          {"text": "🏠 Menú", "callback_data": "inicio"}]],
+    )
+
+
+def descargar_foto_telegram(file_id):
+    """Descarga una foto de Telegram a un archivo temporal y devuelve su ruta."""
+    archivo = llamar("getFile", file_id=file_id)
+    if not archivo.get("ok"):
+        raise RuntimeError(archivo.get("description", "Telegram no encontró la foto"))
+
+    ruta_remota = archivo["result"]["file_path"]
+    respuesta = requests.get(API_ARCHIVOS + ruta_remota, timeout=60)
+    respuesta.raise_for_status()
+    sufijo = Path(ruta_remota).suffix or ".jpg"
+    with tempfile.NamedTemporaryFile(prefix="factura_", suffix=sufijo, delete=False) as temporal:
+        temporal.write(respuesta.content)
+    return Path(temporal.name)
+
+
+# Elimina la foto temporal asociada al chat.
+def _limpiar_foto_factura(chat_id):
+    ruta = fotos_factura.pop(chat_id, None)
+    if ruta:
+        ruta.unlink(missing_ok=True)
+
+
+# Guarda una copia de la factura como evidencia.
+def archivar_foto_factura(ruta_temporal):
+    CARPETA_EVIDENCIA_FACTURAS.mkdir(parents=True, exist_ok=True)
+    nombre = datetime.now().strftime("ticket_%Y%m%d_%H%M%S_%f") + Path(ruta_temporal).suffix
+    ruta_evidencia = CARPETA_EVIDENCIA_FACTURAS / nombre
+    shutil.copy2(ruta_temporal, ruta_evidencia)
+    return ruta_evidencia
+
+
+
+
+
+# Devuelve las opciones manuales disponibles si falla la lectura.
+def botones_plan_b_factura():
+    return [
+        [{"text": "🥫 Cargar manualmente", "callback_data": "factura:manual"}],
+        [{"text": "🏠 Volver al menú", "callback_data": "factura:menu"}],
+    ]
+
+
+# Solicita al usuario una foto de la factura.
+def pedir_foto_factura(chat_id, message_id):
+    _limpiar_foto_factura(chat_id)
+    confirmaciones_factura.pop(chat_id, None)
+    esperando_foto_factura.add(chat_id)
+    editar(chat_id, message_id,
+           "🧾 Enviame una foto clara de la factura o ticket. "
+           "La imagen se enviará a Gemini para leer los productos; evitá incluir datos personales.",
+           [[{"text": "❌ Cancelar", "callback_data": "factura:cancelar"}]])
+
+
+# Procesa la foto de factura recibida desde Telegram.
+def atender_foto_factura(chat_id, fotos):
+    if chat_id not in esperando_foto_factura:
+        return
+    foto = max(fotos, key=lambda item: item.get("file_size", 0))
+    try:
+        ruta = descargar_foto_telegram(foto["file_id"])
+    except (requests.RequestException, RuntimeError, KeyError) as error:
+        responder(
+            chat_id,
+            f"⚠ No pude descargar la foto: {error}",
+            botones_plan_b_factura(),
+        )
+        return
+    _limpiar_foto_factura(chat_id)
+    fotos_factura[chat_id] = ruta
+    esperando_foto_factura.discard(chat_id)
+    try:
+        evidencia = archivar_foto_factura(ruta)
+        print(f"Evidencia de factura guardada en: {evidencia}")
+    except OSError as error:
+        print(f"No se pudo guardar la evidencia de la factura: {error}")
+        responder(
+            chat_id,
+            "⚠ No pude guardar la foto de evidencia. No inicié la lectura; "
+            "podés cargar la compra manualmente.",
+            botones_plan_b_factura(),
+        )
+        return
+    responder(chat_id, "⏳ Foto recibida. Estoy leyendo el ticket con Gemini...")
+    try:
+        respuesta = procesador_factura.procesar_factura(
+            ruta, compras.ingredientes_conocidos()
+        )
+        ingredientes, rechazados = compras.interpretar_respuesta_factura(respuesta)
+        if not ingredientes:
+            texto = "⚠ No pude leer productos del ticket. La alacena no cambió."
+            if rechazados:
+                bloque = _bloque_rechazados(
+                    rechazados, 4096 - len(texto) - 2
+                )
+                if bloque:
+                    texto += "\n\n" + bloque
+            responder(
+                chat_id,
+                texto,
+                botones_plan_b_factura(),
+            )
+            return
+        solicitar_confirmacion_factura(chat_id, ingredientes, rechazados=rechazados)
+    except Exception as error:
+        print(f"No se pudo procesar la factura de {chat_id}: {error}")
+        responder(
+            chat_id,
+            "⚠ No pude leer el ticket. No modifiqué la alacena. "
+            "Podés cargar la compra manualmente.",
+            botones_plan_b_factura(),
+        )
+
+
+def _bloque_rechazados(rechazados, max_caracteres):
+    """Formatea renglones rechazados dentro del espacio disponible del mensaje."""
+    titulo = "⚠ No pude cargar estos renglones:"
+    if not rechazados or max_caracteres < len(titulo):
+        return ""
+
+    visibles = []
+    total = len(rechazados)
+    for renglon in rechazados[:10]:
+        restantes = total - len(visibles) - 1
+        sufijo = f"...y {restantes} más" if restantes else ""
+        contenido_actual = "\n".join(f"- {linea}" for linea in visibles)
+        separador = "\n" if contenido_actual else ""
+        espacio = (
+            max_caracteres - len(titulo) - 1 - len(contenido_actual)
+            - len(separador) - (len(sufijo) + 1 if sufijo else 0) - 2
+        )
+        if espacio < 0:
+            break
+        renglon = str(renglon)
+        if len(renglon) > espacio:
+            if espacio < 1:
+                break
+            renglon = renglon[:espacio - 1] + "…"
+            visibles.append(renglon)
+            break
+        visibles.append(renglon)
+
+    restantes = total - len(visibles)
+    partes = [titulo]
+    partes.extend(f"- {renglon}" for renglon in visibles)
+    if restantes:
+        partes.append(f"...y {restantes} más")
+    bloque = "\n".join(partes)
+    return bloque if len(bloque) <= max_caracteres else ""
+
+
+def solicitar_confirmacion_factura(chat_id, ingredientes, rechazados=()):
+    """Muestra el resultado del lector externo y espera confirmación explícita."""
+    stock_proyectado = compras.stock_proyectado_de_compra(ingredientes)
+    lineas = [f"{nombre}, {compras.formatear_cantidad(cantidad)}, {unidad}"
+              for nombre, cantidad, unidad in stock_proyectado]
+    texto = "\n".join(lineas)
+    frase_confirmacion = "Confirmá para guardar estos totales en la alacena."
+    if rechazados:
+        prefijo = texto + ("\n\n" if texto else "")
+        sufijo = "\n\n" + frase_confirmacion
+        bloque = _bloque_rechazados(
+            rechazados, 4096 - len(prefijo) - len(sufijo)
+        )
+        if bloque:
+            texto = prefijo + bloque + sufijo
+        else:
+            texto += "\n\n" + frase_confirmacion
+    else:
+        texto += "\n\n" + frase_confirmacion
+    enviado = responder(
+        chat_id,
+        texto,
+        [[{"text": "✅ Confirmar", "callback_data": "factura:confirmar"},
+          {"text": "❌ Cancelar", "callback_data": "factura:cancelar"}]],
+    )
+    if enviado.get("ok"):
+        confirmaciones_factura[chat_id] = {
+            "message_id": enviado["result"]["message_id"],
+            "ingredientes": ingredientes,
+            "stock_proyectado": stock_proyectado,
+        }
+
+
+# Procesa las opciones de confirmación o cancelación de la factura.
+def atender_boton_de_factura(chat_id, message_id, dato):
+    if dato == "factura:manual":
+        esperando_foto_factura.discard(chat_id)
+        confirmaciones_factura.pop(chat_id, None)
+        _limpiar_foto_factura(chat_id)
+        empezar_edicion_alacena(chat_id, message_id)
+        return
+    if dato == "factura:menu":
+        esperando_foto_factura.discard(chat_id)
+        confirmaciones_factura.pop(chat_id, None)
+        _limpiar_foto_factura(chat_id)
+        abrir_menu(chat_id)
+        return
+    if dato == "factura:nueva":
+        menu = menus.pop((chat_id, message_id), None)
+        if menu is not None:
+            pedir_foto_factura(chat_id, message_id)
+        return
+
+    confirmacion = confirmaciones_factura.get(chat_id)
+    if dato == "factura:confirmar":
+        if confirmacion is None or confirmacion["message_id"] != message_id:
+            editar(chat_id, message_id, "Esta confirmación ya no está activa. Mandá /start para empezar de nuevo.")
+            return
+        try:
+            compras.sumar_al_stock(confirmacion["ingredientes"])
+        except compras.ErrorDeDatos as error:
+            editar(chat_id, message_id, f"⚠ No actualicé la alacena: {error}")
+            return
+        del confirmaciones_factura[chat_id]
+        _limpiar_foto_factura(chat_id)
+        editar(
+            chat_id, message_id, "✅ Compra confirmada.\n\n" + texto_alacena(),
+            [[{"text": "🏠 Volver al menú", "callback_data": "factura:menu"}]],
+        )
+    elif dato == "factura:cancelar":
+        esperando_foto_factura.discard(chat_id)
+        confirmaciones_factura.pop(chat_id, None)
+        _limpiar_foto_factura(chat_id)
+        editar(
+            chat_id, message_id, "❌ Carga de factura cancelada. No actualicé la alacena.",
+            [[{"text": "🏠 Volver al menú", "callback_data": "factura:menu"}]],
+        )
 
 
 # ==================================================================
@@ -430,74 +738,47 @@ def terminar_edicion_alacena(chat_id, message_id):
         editar(chat_id, message_id, "Esta edición ya terminó. Mandá /start para abrir el menú.")
         return
     del alacenas_en_edicion[chat_id]
-    editar(chat_id, message_id, "✅ Alacena guardada.\n\n" + texto_alacena())
+    editar(chat_id, message_id, "✅ Alacena guardada.\n\n" + texto_alacena(),
+           [[{"text": "📖 Ver recetas", "callback_data": "recetas"},
+             {"text": "🏠 Volver al menú", "callback_data": "factura:menu"}]])
 
 
 # ==================================================================
 # EL PROCESO: calcular la lista y que el robot la mande
-#esta función ejecuta el robot en un proceso aparte, con un tiempo máximo de espera, para evitar que se quede colgado si Chrome o TagUI se cuelgan
-def ejecutar_robot(mensaje):
-    """
-    Corre el robot en un proceso aparte, con tiempo máximo. Así, si Chrome o
-    TagUI se cuelgan (por ejemplo, con la PC bloqueada), el bot no se queda
-    esperando para siempre: corta el robot y sigue atendiendo.
-    """
-    robot_telegram_web.CAPTURA.unlink(missing_ok=True)  # que no quede la captura de una corrida anterior
-    try:
-        proceso = subprocess.run(
-            [sys.executable, str(ROBOT), "--enviar", GRUPO],
-            input=mensaje.encode("utf-8"), capture_output=True,
-            timeout=MINUTOS_MAXIMOS_ROBOT * 60, cwd=ROBOT.parent,
-        )
-    except subprocess.TimeoutExpired:
-        robot_telegram_web.terminar_procesos_tagui()
-        raise robot_telegram_web.ErrorDelRobot(
-            f"tardó más de {MINUTOS_MAXIMOS_ROBOT} minutos y lo corté. ¿La PC está "
-            "bloqueada? Con la sesión bloqueada Chrome no dibuja las páginas"
-        )
-    if proceso.returncode != 0:
-        errores = proceso.stderr.decode("utf-8", errors="replace").strip().splitlines()
-        raise robot_telegram_web.ErrorDelRobot(errores[-1] if errores else "falló sin dar detalles")
-    return robot_telegram_web.CAPTURA
-
 #esta función cierra el menú de botones y procesa las comidas seleccionadas, calculando la lista de compras, guardando la evidencia y ejecutando el robot para enviar la lista al grupo de Telegram
 def cerrar_menu_y_procesar(chat_id, message_id, seleccionadas, descripcion=None):
     del menus[(chat_id, message_id)]
     editar(chat_id, message_id, f"Pedido: {descripcion or resumen(seleccionadas)}")
 
     try:
-        faltantes, advertencias = compras.calcular_lista(seleccionadas)
+        resultado = procesamiento.procesar_pedido(seleccionadas, GRUPO)
     except compras.ErrorDeDatos as error:
         responder(chat_id, f"⚠ No pude leer los datos: {error}")
         return
 
     # PERTURBACION EXOGENA: comidas del pedido que no tienen receta cargada
-    if advertencias:
+    if resultado.advertencias:
         responder(chat_id, "⚠ No tienen receta cargada en BaseDatos.csv (no se cuentan): "
-                  + ", ".join(advertencias))
+                  + ", ".join(resultado.advertencias))
 
-    if not faltantes:
+    if not resultado.faltantes:
         responder(chat_id, "No hay nada para comprar: el stock actual alcanza para lo elegido.")
         return
 
-    mensaje = compras.armar_mensaje(faltantes)
-    compras.guardar_evidencia(mensaje)
     responder(chat_id, f"🤖 Abro Telegram Web y le escribo la lista al grupo «{GRUPO}»...")
 
-    try:
-        captura = ejecutar_robot(mensaje)
-    except robot_telegram_web.ErrorDelRobot as error:
+    if resultado.error_robot:
         # ERROR EN ESTADO ESTABLE: el cálculo salió bien pero el sistema no
         # llega al resultado esperado (no hay sesión en Telegram Web, no
         # encuentra el grupo, se cortó la conexión). Para que la lista no se
         # pierda, el bot la manda él mismo por la Bot API.
-        responder(chat_id, f"⚠ El robot no pudo mandarla por Telegram Web: {error}\n\n"
-                  f"Te la mando yo:\n\n{mensaje}")
+        responder(chat_id, f"⚠ El robot no pudo mandarla por Telegram Web: {resultado.error_robot}\n\n"
+                  f"Te la mando yo:\n\n{resultado.mensaje}")
         return
 
     confirmacion = f"✅ Lista enviada al grupo «{GRUPO}»"
-    if captura.exists():
-        mandar_foto(chat_id, captura, confirmacion)
+    if resultado.captura and resultado.captura.exists():
+        mandar_foto(chat_id, resultado.captura, confirmacion)
     else:
         responder(chat_id, confirmacion)
 
@@ -525,11 +806,15 @@ def atender(actualizacion):
     if "callback_query" in actualizacion:
         atender_boton(actualizacion["callback_query"])
         return
-    chat_id = actualizacion["message"]["chat"]["id"]
-    texto = actualizacion["message"].get("text", "")
+    mensaje = actualizacion["message"]
+    chat_id = mensaje["chat"]["id"]
+    texto = mensaje.get("text", "")
     # en grupos el comando puede llegar como /start@nombre_del_bot
     comando = texto.split()[0].split("@")[0] if texto else ""
     if comando in ("/start", "/menu", "/cancelar"):
+        esperando_foto_factura.discard(chat_id)
+        confirmaciones_factura.pop(chat_id, None)
+        _limpiar_foto_factura(chat_id)
         # un comando corta cualquier carga o edición que haya quedado a medias
         if cargas.pop(chat_id, None) is not None:
             responder(chat_id, "❌ Carga de receta cancelada, no guardé nada.")
@@ -538,6 +823,8 @@ def atender(actualizacion):
             responder(chat_id, "Dejé de editar la alacena (lo que ya mandaste quedó guardado).")
         if comando != "/cancelar":
             abrir_menu(chat_id)
+    elif mensaje.get("photo"):
+        atender_foto_factura(chat_id, mensaje["photo"])
     elif texto and chat_id in cargas:
         atender_texto_de_carga(chat_id, texto)
     elif texto and chat_id in alacenas_en_edicion:
@@ -545,6 +832,13 @@ def atender(actualizacion):
 
 #esta función es el punto de entrada del programa, que verifica el token del bot, descarta los pedidos pendientes y entra en un bucle para recibir actualizaciones de Telegram y atenderlas
 def main():
+    global API, API_ARCHIVOS, CHAT_PERMITIDO, GRUPO
+    config = leer_config()
+    API = f"https://api.telegram.org/bot{config['TELEGRAM_TOKEN']}/"
+    API_ARCHIVOS = f"https://api.telegram.org/file/bot{config['TELEGRAM_TOKEN']}/"
+    CHAT_PERMITIDO = int(config["TELEGRAM_CHAT_ID"])
+    GRUPO = config["GRUPO_TELEGRAM"]
+
     bot = llamar("getMe")
     if not bot.get("ok"):
         raise SystemExit("El token de config.txt no es válido.")
