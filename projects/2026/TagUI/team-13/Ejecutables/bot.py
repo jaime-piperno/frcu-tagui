@@ -295,6 +295,7 @@ def atender_boton(consulta):
         empezar_edicion_alacena(chat_id, message_id)
 
 
+# Filtro de recetas según la disponibilidad de sus ingredientes.
 def mostrar_resumen_recetas(chat_id, message_id, comidas):
     """Muestra un resumen de todas las recetas: cuáles se pueden hacer y cuáles no."""
     completas = []
@@ -343,12 +344,14 @@ def descargar_foto_telegram(file_id):
     return Path(temporal.name)
 
 
+# Elimina la foto temporal asociada al chat.
 def _limpiar_foto_factura(chat_id):
     ruta = fotos_factura.pop(chat_id, None)
     if ruta:
         ruta.unlink(missing_ok=True)
 
 
+# Guarda una copia de la factura como evidencia.
 def archivar_foto_factura(ruta_temporal):
     CARPETA_EVIDENCIA_FACTURAS.mkdir(parents=True, exist_ok=True)
     nombre = datetime.now().strftime("ticket_%Y%m%d_%H%M%S_%f") + Path(ruta_temporal).suffix
@@ -360,6 +363,7 @@ def archivar_foto_factura(ruta_temporal):
 
 
 
+# Devuelve las opciones manuales disponibles si falla la lectura.
 def botones_plan_b_factura():
     return [
         [{"text": "🥫 Cargar manualmente", "callback_data": "factura:manual"}],
@@ -367,6 +371,7 @@ def botones_plan_b_factura():
     ]
 
 
+# Solicita al usuario una foto de la factura.
 def pedir_foto_factura(chat_id, message_id):
     _limpiar_foto_factura(chat_id)
     confirmaciones_factura.pop(chat_id, None)
@@ -377,6 +382,7 @@ def pedir_foto_factura(chat_id, message_id):
            [[{"text": "❌ Cancelar", "callback_data": "factura:cancelar"}]])
 
 
+# Procesa la foto de factura recibida desde Telegram.
 def atender_foto_factura(chat_id, fotos):
     if chat_id not in esperando_foto_factura:
         return
@@ -412,13 +418,20 @@ def atender_foto_factura(chat_id, fotos):
         )
         ingredientes, rechazados = compras.interpretar_respuesta_factura(respuesta)
         if not ingredientes:
+            texto = "⚠ No pude leer productos del ticket. La alacena no cambió."
+            if rechazados:
+                bloque = _bloque_rechazados(
+                    rechazados, 4096 - len(texto) - 2
+                )
+                if bloque:
+                    texto += "\n\n" + bloque
             responder(
                 chat_id,
-                "⚠ No pude leer productos del ticket. La alacena no cambió.",
+                texto,
                 botones_plan_b_factura(),
             )
             return
-        solicitar_confirmacion_factura(chat_id, ingredientes)
+        solicitar_confirmacion_factura(chat_id, ingredientes, rechazados=rechazados)
     except Exception as error:
         print(f"No se pudo procesar la factura de {chat_id}: {error}")
         responder(
@@ -429,13 +442,62 @@ def atender_foto_factura(chat_id, fotos):
         )
 
 
-def solicitar_confirmacion_factura(chat_id, ingredientes):
+def _bloque_rechazados(rechazados, max_caracteres):
+    """Formatea renglones rechazados dentro del espacio disponible del mensaje."""
+    titulo = "⚠ No pude cargar estos renglones:"
+    if not rechazados or max_caracteres < len(titulo):
+        return ""
+
+    visibles = []
+    total = len(rechazados)
+    for renglon in rechazados[:10]:
+        restantes = total - len(visibles) - 1
+        sufijo = f"...y {restantes} más" if restantes else ""
+        contenido_actual = "\n".join(f"- {linea}" for linea in visibles)
+        separador = "\n" if contenido_actual else ""
+        espacio = (
+            max_caracteres - len(titulo) - 1 - len(contenido_actual)
+            - len(separador) - (len(sufijo) + 1 if sufijo else 0) - 2
+        )
+        if espacio < 0:
+            break
+        renglon = str(renglon)
+        if len(renglon) > espacio:
+            if espacio < 1:
+                break
+            renglon = renglon[:espacio - 1] + "…"
+            visibles.append(renglon)
+            break
+        visibles.append(renglon)
+
+    restantes = total - len(visibles)
+    partes = [titulo]
+    partes.extend(f"- {renglon}" for renglon in visibles)
+    if restantes:
+        partes.append(f"...y {restantes} más")
+    bloque = "\n".join(partes)
+    return bloque if len(bloque) <= max_caracteres else ""
+
+
+def solicitar_confirmacion_factura(chat_id, ingredientes, rechazados=()):
     """Muestra el resultado del lector externo y espera confirmación explícita."""
     stock_proyectado = compras.stock_proyectado_de_compra(ingredientes)
     lineas = [f"{nombre}, {compras.formatear_cantidad(cantidad)}, {unidad}"
               for nombre, cantidad, unidad in stock_proyectado]
     texto = "\n".join(lineas)
-    texto += "\n\nConfirmá para guardar estos totales en la alacena."
+    frase_confirmacion = "Confirmá para guardar estos totales en la alacena."
+    if rechazados:
+        prefijo = texto + ("\n\n" if texto else "")
+        sufijo = "\n\n" + frase_confirmacion
+        bloque = _bloque_rechazados(
+            rechazados, 4096 - len(prefijo) - len(sufijo)
+        )
+        if bloque:
+            texto = prefijo + bloque + sufijo
+        else:
+            texto += "\n\n" + frase_confirmacion
+    else:
+        texto += "\n\n" + frase_confirmacion
     enviado = responder(
         chat_id,
         texto,
@@ -450,6 +512,7 @@ def solicitar_confirmacion_factura(chat_id, ingredientes):
         }
 
 
+# Procesa las opciones de confirmación o cancelación de la factura.
 def atender_boton_de_factura(chat_id, message_id, dato):
     if dato == "factura:manual":
         esperando_foto_factura.discard(chat_id)

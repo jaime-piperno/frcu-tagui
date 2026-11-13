@@ -66,6 +66,7 @@ def menu_semanal():
     return [(fila[0], fila[1]) for fila in _leer_csv("Menu.csv")]
 
 
+# Guarda el menú semanal en el archivo CSV.
 def guardar_menu(dias_y_comidas):
     _escribir_csv("Menu.csv", ["Dia", "Comida"], dias_y_comidas)
 
@@ -82,6 +83,7 @@ def ingredientes_de(comida):
 UNIDADES = ("kg", "lt", "unidad")
 
 
+# Escribe los encabezados y las filas en un archivo CSV.
 def _escribir_csv(nombre, encabezados, filas):
     # se reescribe el archivo entero: así queda prolijo aunque el original no
     # termine en salto de línea
@@ -169,7 +171,7 @@ def interpretar_respuesta_factura(respuesta):
         if not texto:
             continue
         texto = re.sub(
-            r"^gemini\s+(?:ha\s+dicho|dijo)\s*[:,.-]?\s*",
+            r"^gemini\s+(?:ha\s+dicho|dijo|dice|said|says)\s*[:,.-]?\s*",
             "",
             texto,
             flags=re.IGNORECASE,
@@ -263,6 +265,7 @@ def faltantes_para_receta(comida):
     return faltantes
 
 
+# Indica si un ingrediente aparece en alguna receta.
 def se_usa_en_recetas(ingrediente):
     return any(normalizar(fila[1]) == normalizar(ingrediente) for fila in _leer_csv("BaseDatos.csv"))
 
@@ -385,11 +388,13 @@ def calcular_lista(seleccionadas):
     return faltantes, advertencias
 
 
+# Convierte una cantidad a texto sin decimales innecesarios.
 def formatear_cantidad(cantidad):
     # 1.0 -> "1", 0.5 -> "0.5"
     return str(int(cantidad)) if cantidad == int(cantidad) else str(cantidad)
 
 
+# Genera el texto de la lista de compras.
 def armar_mensaje(faltantes):
     lineas = ["Lista de compras:"]
     for ingrediente, cantidad, unidad in faltantes:

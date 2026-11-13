@@ -57,6 +57,7 @@ FACTURA_CONFIG_CAMPOS = {
 }
 
 
+# Lee y valida los valores de configuración del bot.
 def leer_config(obligatorias=CLAVES_OBLIGATORIAS):
     if not ARCHIVO_CONFIG.exists():
         raise SystemExit(

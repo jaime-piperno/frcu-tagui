@@ -23,6 +23,7 @@ class ResultadoPedido:
     error_robot: str = ""
 
 
+# Envía la lista al grupo mediante el robot de Telegram Web.
 def _ejecutar_robot(mensaje, grupo):
     try:
         import robot_telegram_web

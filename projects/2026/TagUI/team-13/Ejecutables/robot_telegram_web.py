@@ -55,13 +55,8 @@ MAYUSCULAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑ"
 MINUSCULAS = "abcdefghijklmnopqrstuvwxyzáéíóúüñ"
 
 
+# Construye el selector XPath para buscar chats locales en Telegram evitando la búsqueda global.
 def _resultado_de_busqueda(nombre_chat):
-    # El buscador de Telegram muestra dos secciones: tus chats ("Chats and
-    # Contacts") y la búsqueda global, con canales y bots públicos de
-    # desconocidos que pueden llamarse igual que tu grupo. Solo se acepta un
-    # resultado de una sección cuyo título NO diga "global" ("Global Search",
-    # "Búsqueda global"): así el robot nunca le escribe a un extraño.
-    # El nombre se compara sin importar mayúsculas ("autobot" = "Autobot").
     nombre = " ".join(nombre_chat.split()).lower()
     return (
         '//div[contains(@class,"search-section")]'
@@ -76,8 +71,8 @@ class ErrorDelRobot(Exception):
     """El robot no pudo completar algún paso en Telegram Web."""
 
 
+# Inicia TagUI con los ajustes necesarios para Linux.
 def _iniciar_tagui():
-    # El motor antiguo de TagUI no entiende algunas directivas OpenSSL de Ubuntu.
     if platform.system() != "Linux":
         return r.init()
 
@@ -92,10 +87,8 @@ def _iniciar_tagui():
             os.environ["OPENSSL_CONF"] = openssl_conf
 
 
+# Espera a que un elemento aparezca en la página.
 def _esperar(elemento, segundos):
-    # Se fija una vez por segundo si el elemento ya está en la página. Se hace
-    # a mano con present() (que mira una sola vez) porque la espera propia de
-    # exist() no resultó confiable en las pruebas.
     for _ in range(int(segundos)):
         if r.present(elemento):
             return True
@@ -103,6 +96,7 @@ def _esperar(elemento, segundos):
     return r.present(elemento)
 
 
+# Abre Telegram Web y verifica que haya una sesión activa.
 def _abrir_telegram(segundos_para_iniciar_sesion):
     r.url(URL_TELEGRAM)
     if _esperar(BUSCADOR, 15):
@@ -119,10 +113,12 @@ def _abrir_telegram(segundos_para_iniciar_sesion):
     r.wait(3)
 
 
+# Separa el texto en renglones no vacíos.
 def _renglones(texto):
     return [renglon.strip() for renglon in texto.splitlines() if renglon.strip()]
 
 
+# Busca y abre el chat indicado en Telegram Web.
 def _abrir_chat(nombre_chat):
     # Telegram Web a veces redibuja el panel de búsqueda mientras termina de
     # cargar y se pierde lo tipeado: por eso se reintenta la búsqueda y el click.
@@ -150,12 +146,8 @@ def _abrir_chat(nombre_chat):
     )
 
 
+# Pega el mensaje completo en la caja de Telegram.
 def _pegar_mensaje(mensaje):
-    # TagUI convierte cada salto de línea en la tecla Enter, y en Telegram
-    # Enter envía: tipeada letra por letra, la lista saldría en un mensaje por
-    # renglón. Por eso se PEGA entera en la caja de mensaje, como haría una
-    # persona con Ctrl+V. El texto viaja codificado (%20, %0A...) para que
-    # ningún carácter se rompa en el camino de Python a TagUI y a Chrome.
     texto = urllib.parse.quote(mensaje)
     pegado = r.dom(
         f'var caja = document.getElementById("{ID_CAJA_DE_MENSAJE}"); caja.focus(); '
@@ -166,6 +158,7 @@ def _pegar_mensaje(mensaje):
         raise ErrorDelRobot("no pude pegar la lista en la caja de mensaje")
 
 
+# Envía el mensaje y verifica que haya salido.
 def _enviar():
     r.click(BOTON_ENVIAR)
     # cuando el mensaje sale, la caja de mensaje queda vacía
@@ -176,12 +169,14 @@ def _enviar():
     raise ErrorDelRobot("hice click en enviar pero el mensaje quedó sin salir")
 
 
+# Escribe y envía el mensaje indicado.
 def _escribir_y_enviar(mensaje):
     _pegar_mensaje(mensaje)
     _enviar()
     r.wait(2)  # para que la captura muestre el mensaje ya enviado
 
 
+# Guarda una captura del chat abierto.
 def _sacar_captura():
     # Si no encuentra la columna del chat no saca nada (antes que mostrar la
     # pantalla entera): el bot confirma igual, solo que sin foto.
@@ -207,6 +202,7 @@ def enviar_por_telegram_web(nombre_chat, mensaje, segundos_para_iniciar_sesion=2
         r.close()
 
 
+# Inicia sesión en Telegram Web y envía un mensaje de prueba opcional.
 def _iniciar_sesion_y_probar(nombre_chat=None):
     if not _iniciar_tagui():
         raise SystemExit("No se pudo iniciar TagUI ni abrir Chrome.")
