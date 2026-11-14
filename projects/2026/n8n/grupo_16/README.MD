@@ -128,3 +128,67 @@ To add a third entry point (e.g. Telegram), connect it to `Extraer texto del PDF
   - Automatic intake through a Telegram bot that receives PDFs/images and feeds them into the reconciliation flow.
 
 ---
+
+## 🔄 Stage 2 – Improvement
+
+- **Team number:** 8
+- **Members:**
+  - Muga Isaías
+  - Poerio Santiago
+  - Riolfo Franco
+  - Rojas Federico
+  - Venturino Diego
+
+The sections above describe the Stage 1 bot and are kept as they were written. This section supersedes them.
+
+### 🚀 Improvement Description
+
+- **What was improved:**
+  Two changes to the Stage 1 workflow, both taken from the *Possible improvements* list above. The improved version replaces `grupo_16_workflow.json` in this folder.
+
+  1. **Duplicate control by reference.** A receipt whose `Referencia` was already recorded is classified as `Duplicado` and is not appended to `Resultado`.
+     - `Leer resultado` reads the `Resultado` sheet once per run (`executeOnce`, and `alwaysOutputData` so an empty sheet does not stop the flow).
+     - `Detectar duplicados` compares the normalized reference against the rows already stored in `Resultado` and against the references seen earlier in the same batch, so the same PDF uploaded twice in one submit is also caught. Duplicates keep their binary, `driveId` and `origen` for the archive step.
+     - `¿Es nuevo?` lets only the non-duplicates through to `Registrar Resultado`. Its false branch is left unconnected on purpose.
+
+  2. **Archive by result.** Each PDF is stored in the folder that matches its `Estado`: `Conciliados`, `No encontrados`, `Requiere revisión` or `Duplicados`.
+     - `Asignar carpeta destino` runs right after `Detectar duplicados`, adds `carpetaDestino` with the folder ID that corresponds to that item's status, and forwards the binary. Unknown statuses default to `Requiere revisión`.
+     - `Guardar en carpeta por estado` and `Mover a carpeta por estado` read `{{ $json.carpetaDestino }}`, so a single Drive node per path archives any number of PDFs in different folders, without a Switch or one branch per status.
+
+  The summary email and the final screen are now built from `Detectar duplicados` instead of `Registrar Resultado`, so a run made only of duplicates still sends the email and shows the screen. The summary also gained a `Duplicados` counter, a blue badge and a footer line stating that duplicates are not written to the sheet.
+
+- **Why:**
+  In Stage 1 nothing prevented the same receipt from being appended twice, and every processed PDF ended in a single `Procesados` folder. Uploading a receipt by mistake, or leaving a file in the input folder for a second run, produced repeated rows that altered the totals and had to be cleaned by hand. Finding the PDFs that needed review meant comparing the sheet against a folder full of already reconciled receipts. The two changes remove both manual clean-ups without touching the extraction or the comparison logic.
+
+### 🛠️ Updated Usage Instructions
+
+Only these steps change with respect to Stage 1:
+
+1. **Import `grupo_16_workflow.json`**, which already contains the Stage 2 changes. Credentials are still not exported: create the OAuth client and reconnect Google Drive, Google Sheets and Gmail as described in steps 5–7 above. The Google Sheets credential is now needed by **four** nodes, the new one being `Leer resultado` (`Leer movimientos (vista)`, `Leer movimientos`, `Leer resultado`, `Registrar Resultado`).
+2. **Create four folders** inside the `Procesados` folder: `Conciliados`, `No encontrados`, `Requiere revisión` and `Duplicados`. The workflow does not create them.
+3. **Copy their IDs** into the `CARPETAS` map at the top of the `Asignar carpeta destino` Code node. That map is the only place where the folder IDs are stored.
+4. **Point the nodes to your own Drive and sheet.** This supersedes steps 8 and 9 of Stage 1, because `Guardar en procesados` and `Mover a procesados` no longer exist in this version:
+   - Drive input folder ID --> `Buscar nuevos comprobantes`
+   - the four folder IDs --> the `CARPETAS` map of `Asignar carpeta destino`. There is no single `Procesados` destination anymore.
+   - Google Sheet ID --> `Leer movimientos (vista)`, `Leer movimientos`, `Leer resultado` and `Registrar Resultado`
+   - Destination email --> `Enviar Alerta`
+5. **Keep the `Referencia` header** in the `Resultado` sheet: it is the column used to detect duplicates. If it is renamed, `Detectar duplicados` stops with an explicit error instead of running without duplicate control. A `Resultado` sheet with only the header row is valid.
+6. Everything else stays as in Stage 1: OAuth client, APIs, `Movimientos`/`Resultado` structure, input folder, form, schedule and destination email.
+
+The three sample receipts are now included in `Comprobantes/`, so the repository is enough to reproduce the tests:
+
+| PDF | Extracted data | First run | Second run |
+|---|---|---|---|
+| `comprobante_prueba_1_conciliado.pdf` | 24/09/2026 · $7,200 · ref 184000111222 | `Conciliada` | `Duplicado` |
+| `comprobante_prueba_2_no_encontrada.pdf` | 20/09/2026 · $4,850 · ref 190234455667 | `No encontrada` | `Duplicado` |
+| `comprobante_prueba_3_requiere_revision.pdf` | 25/09/2026 · amount not extracted (no `$`) · ref 190555667788 | `Requiere revisión` | `Duplicado` |
+
+In the first run each PDF lands in the folder of its status and one row per receipt is appended. In a second run all three are `Duplicado`, no row is appended and the PDFs go to `Duplicados`.
+
+### 📝 Additional Notes
+
+- Receipts without a readable reference are never treated as duplicates, they keep their status and stay in `Requiere revisión` for manual analysis.
+- `Requiere revisión` and `No encontrada` receipts that do have a reference count as a precedent. To process one of them again, delete its row from `Resultado`.
+- The duplicate check is per reference, not per file, and it also covers the same PDF uploaded twice in the same submit.
+- Remaining limitations are the same as Stage 1: exact match of date, amount and reference, positional parser, no OCR. The four folders are not created by the workflow.
+- **Demonstration:** [Watch the improved bot on Google Drive](https://drive.google.com/file/d/1t1Ch9BuBBv2RGd5G3eCxrcN4ITak8V9b/view?usp=sharing)
