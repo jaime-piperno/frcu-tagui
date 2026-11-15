@@ -14,3 +14,9 @@ RESULTADOS_DIR = os.path.join(BASE_DIR, 'resultados')
 CONFIGURACIONES_PATH = os.path.join(BASE_DIR, 'configuraciones_busqueda.json')
 ALERTAS_PATH = os.path.join(BASE_DIR, 'alertas_busqueda.json')
 VISTOS_PATH = os.path.join(BASE_DIR, 'licitaciones_vistas.json')
+
+# Ruta al archivo Excel que almacena el catálogo de ítems propios de la empresa
+CATALOGO_PATH = os.path.join(BASE_DIR, 'catalogo_empresa.xlsx')
+
+# Cantidad máxima de procesos a inspeccionar ítems en profundidad por búsqueda
+MAX_PROCESOS_INSPECCION = int(os.getenv('MAX_PROCESOS_INSPECCION', '10'))
