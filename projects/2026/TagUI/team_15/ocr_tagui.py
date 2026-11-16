@@ -16,9 +16,9 @@ RUTA_SCRIPT_TAG = TAGUI_DIR / "ocr_ticket.tag"
 RUTA_SIKULI_DIR = TAGUI_DIR / "ocr_ticket.sikuli"
 RUTA_SIKULI_PY = RUTA_SIKULI_DIR / "ocr_ticket.py"
 
-RUTA_TAGUI_DEFAULT = Path(r"C:\tagui\src")
-RUTA_SIKULIX_JAR = RUTA_TAGUI_DEFAULT / "sikulix" / "sikulix.jar"
-RUTA_JYTHON_JAR = RUTA_TAGUI_DEFAULT / "sikulix" / "jython-standalone-2.7.1.jar"
+RUTA_TAGUI = config.RUTA_TAGUI
+RUTA_SIKULIX_JAR = RUTA_TAGUI / "sikulix" / "sikulix.jar"
+RUTA_JYTHON_JAR = RUTA_TAGUI / "sikulix" / "jython-standalone-2.7.1.jar"
 
 
 def _generar_scripts_ocr(ruta_imagen: Path, ruta_salida: Path, ruta_error: Path) -> None:
@@ -109,12 +109,12 @@ def _generar_scripts_ocr(ruta_imagen: Path, ruta_salida: Path, ruta_error: Path)
 
 
 def _preparar_entorno() -> dict:
-    """Asegura que C:\\tagui\\src esté en el PATH al invocar el subproceso."""
+    """Asegura que la carpeta src de TagUI esté en el PATH al invocar el subproceso."""
     env = os.environ.copy()
-    if RUTA_TAGUI_DEFAULT.exists():
+    if RUTA_TAGUI.exists():
         path_actual = env.get("PATH", "")
-        if str(RUTA_TAGUI_DEFAULT).lower() not in path_actual.lower():
-            env["PATH"] = f"{RUTA_TAGUI_DEFAULT};{path_actual}"
+        if str(RUTA_TAGUI).lower() not in path_actual.lower():
+            env["PATH"] = f"{RUTA_TAGUI};{path_actual}"
     return env
 
 
@@ -149,7 +149,7 @@ def extraer_texto_ocr(ruta_imagen: Path = RUTA_IMAGEN_ACTUAL, timeout: int = 120
         try:
             subprocess.run(
                 ["java", "-jar", str(RUTA_SIKULIX_JAR), "-h"],
-                cwd=str(RUTA_TAGUI_DEFAULT),
+                cwd=str(RUTA_TAGUI),
                 env=env,
                 capture_output=True,
                 text=True,
@@ -162,7 +162,7 @@ def extraer_texto_ocr(ruta_imagen: Path = RUTA_IMAGEN_ACTUAL, timeout: int = 120
     try:
         proc = subprocess.run(
             ["java", "-jar", str(RUTA_SIKULIX_JAR), "-r", str(RUTA_SIKULI_DIR), "-d", "3"],
-            cwd=str(RUTA_TAGUI_DEFAULT),
+            cwd=str(RUTA_TAGUI),
             env=env,
             capture_output=True,
             text=True,
