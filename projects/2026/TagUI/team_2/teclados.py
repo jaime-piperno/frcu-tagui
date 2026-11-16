@@ -74,3 +74,53 @@ def teclado_acciones_alerta(nombre_alerta: str):
         [InlineKeyboardButton("🔙 Volver", callback_data="al_volver")]
     ]
     return InlineKeyboardMarkup(botones)
+
+
+def teclado_prioridad_alerta():
+    botones = [
+        [InlineKeyboardButton("🎯 Solo si incluye ítems de mi catálogo", callback_data="al_prio_si")],
+        [InlineKeyboardButton("🌐 Notificar todas las del rubro", callback_data="al_prio_no")],
+    ]
+    return InlineKeyboardMarkup(botones)
+
+
+def teclado_menu_catalogo():
+    botones = [
+        [InlineKeyboardButton("📋 Ver ítems del catálogo", callback_data="cat_ver")],
+        [InlineKeyboardButton("🔍 Buscar en COMPR.AR (BuscarItemCiudadano)", callback_data="cat_buscar_web")],
+        [InlineKeyboardButton("➕ Agregar ítem manualmente", callback_data="cat_agregar_manual")],
+        [InlineKeyboardButton("📥 Descargar catalogo_empresa.xlsx", callback_data="cat_descargar")],
+        [InlineKeyboardButton("📤 Subir/Reemplazar Excel (.xlsx)", callback_data="cat_subir_excel")],
+        [InlineKeyboardButton("🗑️ Eliminar un ítem", callback_data="cat_eliminar_menu")],
+    ]
+    return InlineKeyboardMarkup(botones)
+
+
+def teclado_resultados_items_ciudadano(items: list):
+    botones = []
+    for idx, item in enumerate(items):
+        codigo = item.get('codigo', 'S/C')
+        desc = item.get('descripcion', '')[:35]
+        botones.append([
+            InlineKeyboardButton(
+                f"➕ Agregar {codigo} ({desc}...)",
+                callback_data=f"cat_addweb_{idx}",
+            )
+        ])
+    botones.append([InlineKeyboardButton("🔙 Volver al Catálogo", callback_data="cat_volver")])
+    return InlineKeyboardMarkup(botones)
+
+
+def teclado_eliminar_item_catalogo(df_catalogo):
+    botones = []
+    for idx, row in df_catalogo.iterrows():
+        codigo = str(row.get('Codigo', '')).strip() or 'S/C'
+        desc = str(row.get('Descripcion', '')).strip()[:30]
+        botones.append([
+            InlineKeyboardButton(
+                f"🗑️ {idx + 1}. {codigo} - {desc}",
+                callback_data=f"cat_delitem_{idx}",
+            )
+        ])
+    botones.append([InlineKeyboardButton("🔙 Volver al Catálogo", callback_data="cat_volver")])
+    return InlineKeyboardMarkup(botones)

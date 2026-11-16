@@ -10,3 +10,5 @@ Screenshot*.png
 README.md
 Dockerfile
 .dockerignore
+catalogo_empresa.xlsx
+*.tmp.xlsx

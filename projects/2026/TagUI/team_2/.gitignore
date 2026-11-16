@@ -84,3 +84,5 @@ tagui_local.js
 chrome/
 alertas_busqueda.json
 licitaciones_vistas.json
+catalogo_empresa.xlsx
+*.tmp.xlsx

@@ -157,3 +157,51 @@ python main.py
     - Indicar en el reporte de Excel el grado de coincidencia de cada proceso (cuántos y cuáles ítems matchean con el catálogo).
     - Priorizar las alertas, notificando sólo los procesos que tengan al menos un ítem relevante para la empresa.
     - Como el matching por texto exacto puede ser limitado (las descripciones varían entre organismos), podría complementarse con búsqueda por palabras clave, similitud de texto o códigos de catálogo.
+
+---
+
+## 🔄 Etapa 2 – Mejora (Stage 2 – Improvement)
+
+- **Número de Grupo (Team number):** 10
+- **Miembros (Members):**
+  - Octavio Orcellet
+  - Milton Ibarra
+  - Francisco Bournissen
+  - Edgardo Del Real
+  - Marcos Cettour
+
+### 🚀 Descripción de la Mejora (Improvement Description)
+
+- **Qué se mejoró (What was improved):**
+  1. **Gestión del Catálogo de la Empresa (`/catalogo` y `catalogo.py`):** Se creó un nuevo comando `/catalogo` en Telegram y el módulo `catalogo.py` para administrar un archivo Excel propio (`catalogo_empresa.xlsx` con columnas `Codigo`, `Descripcion`, `Palabras_Clave` y `Rubro`). Desde Telegram el usuario puede listar su catálogo, eliminar ítems, agregar ítems manualmente, descargar o subir/reemplazar el archivo `.xlsx` completo, y consultar en vivo el buscador oficial [BuscarItemCiudadano](https://comprar.gob.ar/Item/Item/BuscarItemCiudadano) de COMPR.AR para agregar ítems con su código oficial tocando un botón inline.
+  2. **Recolección de Ítems por Licitación (`scraper.py`):** Durante la búsqueda de procesos, el bot ahora accede a la vista previa del pliego (`VistaPreviaPliegoCiudadano.aspx`) y extrae la tabla `"Detalle de productos o servicios"` (`#ctl00_CPH1_UCVistaPreviaPliego_UC_DetalleProductos_gvLineaPliego`), recolectando para cada renglón: número de renglón, objeto del gasto, código oficial del ítem, descripción técnica, cantidad y unidad de medida.
+  3. **Motor de Cruce Inteligente en 3 Niveles (`catalogo.py`):** Cada ítem licitado se compara contra `catalogo_empresa.xlsx` combinando tres niveles: **1) Código oficial de COMPR.AR** (100% código exacto / 88% misma clase), **2) Palabras clave normalizadas** (65% a 95% sin tildes ni signos) y **3) Similitud de texto difusa y solapamiento de tokens** (`difflib.SequenceMatcher` 60% filtrando *stopwords*).
+  4. **Reporte Excel Enriquecido de 2 Hojas (`.xlsx`):** El reporte descargado se transforma en un archivo `.xlsx` con dos hojas: `Procesos` (que conserva las columnas originales y agrega `Coincide con Catálogo`, `Ítems Coincidentes`, `Grado de Coincidencia` y `Detalle de Coincidencias`) e `Items_Licitados` (desglose renglón por renglón de todos los ítems extraídos y el criterio/puntaje de coincidencia de cada uno), además de enviar un resumen destacado en el chat de Telegram.
+  5. **Priorización de Alertas Automáticas (`/alertas`):** Al crear una alerta se incorporó la opción de elegir entre **"🎯 Solo si incluye ítems de mi catálogo"** (`solo_catalogo=True`) o **"🌐 Notificar todas las del rubro"**, permitiendo que la tarea en segundo plano filtre y notifique únicamente aquellas licitaciones que tengan al menos un ítem coincidente con la empresa.
+  6. **Control de Concurrencia y Pruebas Unitarias (`tests/test_catalogo.py`):** Se agregó sincronización sobre el navegador (`TAGUI_LOCK`), escrituras atómicas thread-safe en archivos `.json` y `.xlsx`, y una batería de pruebas unitarias en `tests/test_catalogo.py`.
+
+- **Por qué (Why):**
+  En la Etapa 1, el bot sólo descargaba la planilla general de cabeceras (`ReporteProcesos.xls`), donde únicamente figura el título general de la contratación pero no qué productos específicos ni qué cantidades demanda el organismo público. Esto obligaba al usuario a revisar manualmente cada pliego en la web para saber si podía cotizar y hacía que las alertas automáticas notificaran procesos irrelevantes para la empresa. Además, como las descripciones redactadas por cada organismo suelen variar, era necesario un motor de cruce flexible (código oficial, palabras clave y similitud de texto), junto con un control de sincronización que resolviera la limitación de concurrencia de la Etapa 1 cuando una alerta automática coincidía con una búsqueda manual.
+
+### 🛠️ Instrucciones de Uso Actualizadas (Updated Usage Instructions)
+
+- **Despliegue en Docker y Local (Sin cambios respecto a la Etapa 1):** Los pasos y comandos de instalación y ejecución en Docker y Local de la Etapa 1 se mantienen exactamente iguales. El archivo `catalogo_empresa.xlsx` se inicializa automáticamente con ítems de ejemplo al arrancar el bot y mantiene una copia sincronizada dentro del volumen ya existente `/app/resultados` (`resultados/catalogo_empresa.xlsx`) para persistir entre reinicios del contenedor.
+- **Nuevos comandos e interacciones en Telegram:**
+  - `/catalogo` — abre el menú interactivo para ver los ítems cargados, buscar ítems oficiales en `BuscarItemCiudadano` de COMPR.AR (por palabra o código) y sumarlos con un botón, cargar ítems manualmente (`CODIGO | DESCRIPCION | PALABRAS_CLAVE`), descargar `catalogo_empresa.xlsx`, subir un Excel `.xlsx` actualizado o eliminar ítems.
+  - `/alertas` — al crear una nueva alerta, ahora permite seleccionar si se desea recibir avisos sólo cuando la licitación incluya ítems del catálogo de la empresa.
+  - `/buscar` y `/presets` — ejecutan automáticamente la inspección de pliegos, envían en el chat un resumen de los procesos que coinciden con el catálogo y adjuntan el nuevo reporte `.xlsx` con las hojas `Procesos` e `Items_Licitados`.
+- **Variable de entorno opcional en `.env`:**
+  - `MAX_PROCESOS_INSPECCION` (opcional, por defecto `10`): define la cantidad máxima de procesos por búsqueda a los que se les inspeccionan los renglones del pliego en profundidad.
+- **Ejecución de pruebas unitarias (opcional):**
+  ```bash
+  python -m unittest discover -s tests
+  ```
+
+### 📝 Información Adicional – Etapa 2 (Additional Notes)
+
+- **Decisiones técnicas y desafíos resueltos:**
+  - **Sincronización y Concurrencia (`TAGUI_LOCK` y escrituras atómicas):** Se incorporó un mutex global (`TAGUI_LOCK` en `scraper.py`) para serializar el uso de TagUI/Chrome. Si una revisión periódica de alertas coincide con una búsqueda manual de un usuario, el bot le avisa por Telegram que el navegador está ocupado y encola su consulta automáticamente en lugar de provocar un fallo de sesión en Chrome. Asimismo, la persistencia de `.json` y `catalogo_empresa.xlsx` utiliza guardado atómico (`tempfile` + `os.replace`) protegido por `threading.Lock`.
+  - **Estrategia de Scraping Híbrido (HTTP + TagUI):** Abrir proceso por proceso únicamente con TagUI añadía varios segundos de latencia por cada pliego. Para optimizarlo, la consulta al buscador ciudadano (`BuscarItemCiudadano` / `_GrillaItems`) y la extracción de renglones (`VistaPreviaPliegoCiudadano.aspx`) priorizan peticiones HTTP directas con `httpx` replicando el estado de vista de ASP.NET (`__VIEWSTATE`, `__EVENTVALIDATION`), respondiendo en milisegundos y utilizando TagUI de forma transparente como mecanismo de respaldo (fallback) si la consulta HTTP falla.
+- **Limitaciones restantes:**
+  - Para mantener tiempos de respuesta ágiles en Telegram cuando un rubro devuelve decenas de contrataciones, la inspección detallada de renglones se acota por defecto a los primeros `MAX_PROCESOS_INSPECCION` procesos (10 por defecto, configurable por variable de entorno).
+  - Si bien el acceso concurrente a los archivos ahora está protegido mediante locks en memoria y reemplazo atómico en un mismo contenedor/proceso, la persistencia continúa basada en archivos locales (`.json` y `.xlsx`) en lugar de un motor de base de datos cliente-servidor.
