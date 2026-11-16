@@ -23,6 +23,7 @@ tagui/ocr_error.txt
 tagui/ocr_ticket.sikuli/
 tagui/*.raw
 tagui/*.js
+tagui/abrir_dashboard.tag
 
 # Entorno
 .python-version
