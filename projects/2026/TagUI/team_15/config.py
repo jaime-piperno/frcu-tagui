@@ -30,3 +30,5 @@ OPENROUTER_MODELO = os.environ.get(
 
 GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID", "")
 URL_DASHBOARD = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}"
+
+RUTA_TAGUI = Path(os.environ.get("TAGUI_DIR", r"C:\tagui\src").strip())

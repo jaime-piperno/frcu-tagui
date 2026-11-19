@@ -1,3 +1,5 @@
+import asyncio
+import datetime
 import logging
 import msvcrt
 import os
@@ -16,11 +18,11 @@ from telegram.ext import (
 )
 
 import config
-from llm_parser import interpretar
+from llm_parser import interpretar, interpretar_ocr
 from excel_manager import ExcelManager
+from ocr_tagui import extraer_texto_ocr, RUTA_IMAGEN_ACTUAL
 from tagui_dashboard import generar_dashboard
 from categorias import MONEDAS, CATEGORIAS
-import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -75,7 +77,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Enviame el gasto como quieras, por ejemplo:\n"
         "• \"almuerzo 4500\"\n"
         "• \"$3200 uber al aeropuerto\"\n"
-        "• \"netflix 1500 usd\"\n\n"
+        "• \"netflix 1500 usd\"\n"
+        "• 📸 O enviame una foto de un ticket/factura para leerla con OCR.\n\n"
         "Comandos:\n"
         "/encender — activar el bot\n"
         "/apagar — apagar el bot\n"
@@ -97,6 +100,19 @@ def _generar_texto_resumen(gastos) -> str:
         f"{i + 1}. {g.categoria} — {g.descripcion} — {g.monto:,.2f} {g.moneda} — {g.fecha}"
         for i, g in enumerate(gastos)
     )
+
+
+def _filtrar_gastos_unicos(gastos: list) -> list:
+    gastos = [g for g in gastos if g.monto > 0 and g.descripcion.strip()]
+    vistos = set()
+    unicos = []
+    for g in gastos:
+        clave = (g.descripcion.strip().lower(), round(g.monto, 2), g.moneda, g.categoria, g.fecha)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        unicos.append(g)
+    return unicos
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -139,17 +155,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "Intentá de nuevo en unos minutos."
         )
         return
-    gastos = [g for g in gastos if g.monto > 0 and g.descripcion.strip()]
 
-    vistos = set()
-    unicos = []
-    for g in gastos:
-        clave = (g.descripcion.strip().lower(), round(g.monto, 2), g.moneda, g.categoria, g.fecha)
-        if clave in vistos:
-            continue
-        vistos.add(clave)
-        unicos.append(g)
-    gastos = unicos
+    gastos = _filtrar_gastos_unicos(gastos)
 
     if not gastos:
         await update.message.reply_text(
@@ -161,6 +168,92 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     PENDIENTES[chat_id] = gastos
 
     await _pedir_confirmacion(update, gastos)
+
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not ENCENDIDO:
+        await _responder(
+            update,
+            "🔴 Estoy apagado. Enviá /encender para activarme.",
+        )
+        return
+
+    chat_id = update.effective_chat.id
+    if chat_id in ESTADOS_EDICION or chat_id in PENDIENTES:
+        await _responder(
+            update,
+            "Hay un gasto pendiente de confirmación. Confirmalo o cancelalo primero (o usá /cancelar).",
+        )
+        return
+
+    if update.message.photo:
+        archivo_tg = await update.message.photo[-1].get_file()
+    elif update.message.document:
+        archivo_tg = await update.message.document.get_file()
+    else:
+        return
+
+    await _responder(
+        update,
+        "🔍 Procesando comprobante con OCR (TagUI)... Esto puede tardar unos segundos.",
+    )
+
+    try:
+        RUTA_IMAGEN_ACTUAL.parent.mkdir(parents=True, exist_ok=True)
+        await archivo_tg.download_to_drive(custom_path=str(RUTA_IMAGEN_ACTUAL))
+        texto_ocr = await asyncio.to_thread(extraer_texto_ocr, RUTA_IMAGEN_ACTUAL)
+    except ValueError as e:
+        await _responder(update, f"⚠️ {e}")
+        return
+    except RuntimeError as e:
+        logger.error("Error en TagUI OCR: %s", e)
+        await _responder(update, f"⚠️ {e}")
+        return
+    except Exception:
+        logger.exception("Error inesperado procesando la imagen con OCR")
+        await _responder(
+            update,
+            "⚠️ Ocurrió un error al procesar la imagen con OCR. Intentá de nuevo.",
+        )
+        return
+
+    nota_usuario = (update.message.caption or "").strip()
+
+    try:
+        gastos = await asyncio.to_thread(interpretar_ocr, texto_ocr, nota_usuario)
+    except ValueError as e:
+        await _responder(update, str(e))
+        return
+    except RuntimeError as e:
+        logger.error("Configuración de IA incompleta en OCR: %s", e)
+        await _responder(update, str(e))
+        return
+    except Exception:
+        logger.exception("El LLM no pudo interpretar el texto del OCR")
+        await _responder(
+            update,
+            "⚠️ Leí el texto de la imagen pero la IA no pudo interpretarlo en este momento. "
+            "Intentá de nuevo en unos minutos.",
+        )
+        return
+
+    gastos = _filtrar_gastos_unicos(gastos)
+
+    if not gastos:
+        vista_previa = texto_ocr[:300] + ("..." if len(texto_ocr) > 300 else "")
+        await _responder(
+            update,
+            "⚠️ Leí la imagen con OCR pero no pude identificar un monto válido.\n\n"
+            f"Texto detectado:\n{vista_previa}",
+        )
+        return
+
+    PENDIENTES[chat_id] = gastos
+    await _pedir_confirmacion(
+        update,
+        gastos,
+        titulo="📸 Esto es lo que leí de tu comprobante (OCR):",
+    )
 
 
 async def _manejar_confirmacion(update: Update, texto: str) -> None:
@@ -315,6 +408,7 @@ def _abrir_dashboard_tagui() -> None:
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     PENDIENTES.pop(chat_id, None)
+    ESTADOS_EDICION.pop(chat_id, None)
     await _responder(update, "Sesión limpia. Enviá un gasto cuando quieras.")
 
 
@@ -422,6 +516,9 @@ def main() -> None:
     app.add_handler(CommandHandler("cancelar", cancelar))
     app.add_handler(CommandHandler("encender", encender))
     app.add_handler(CommandHandler("apagar", apagar))
+    app.add_handler(
+        MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_photo)
+    )
     app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
     )

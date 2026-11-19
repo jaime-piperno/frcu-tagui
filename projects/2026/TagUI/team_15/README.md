@@ -114,3 +114,61 @@ del dólar del día (tomada de dolarhoy.com), y lo abre en el navegador vía Tag
 
 Extraer datos de imágenes (recibos/facturas) usando OCR (SikuliX de TagUI
 o un modelo de visión) en lugar de solo texto.
+
+---
+
+## Etapa 2 – Mejora
+
+- **Número de Grupo :** 7
+- **Miembros (Members):**
+  - Ducret Leturia, Damián Osvaldo
+  - Leiva, Octavio
+  - Meier, Carlos David
+  - Schenberger, Valentina
+  - Szajnowicz, Ignacio
+
+### Descripción de la Mejora
+
+- **¿Qué se mejoró?:**
+  1. **Recepción y Procesamiento de Comprobantes por Imagen (`handle_photo` en `bot.py`):** El bot ahora acepta fotos de recibos, facturas o tickets de compra enviados directamente al chat (como foto o archivo de imagen).
+  2. **Motor de OCR con TagUI y SikuliX (`ocr_tagui.py`):** Se integró el motor de visión y OCR de TagUI (basado en SikuliX y Tesseract). El módulo genera dinámicamente el script `.tag` y el paquete Jython (`.sikuli/ocr_ticket.py`) para ejecutar `sikulix.jar` de manera desatendida y extraer el texto bruto de la imagen.
+  3. **Parser Multimodal Híbrido OCR + LLM (`interpretar_ocr` en `llm_parser.py`):** Se diseñó un prompt especializado de sistema (`PROMPT_SISTEMA_OCR`) para interpretar el texto desestructurado y ruidoso típico de tickets térmicos. El LLM (Gemini u OpenRouter) reconstruye importes, fecha del comprobante, comercio/descripción y categoría sugerida, permitiendo además que el usuario adjunte notas aclaratorias en el epígrafe de la foto.
+  4. **Teclado Interactivo de Corrección y Confirmación:** Tras procesar el ticket (o mensaje de texto), el bot presenta un teclado con botones para modificar en caliente el monto, la categoría, la fecha o la descripción antes del guardado definitivo en Google Sheets.
+  5. **Parametrización y Portabilidad del Entorno (`config.py` y `.env`):** Se desacopló la ruta absoluta de instalación de TagUI (`TAGUI_DIR`), permitiendo configurar instalaciones personalizadas con fallback automático a `C:\tagui\src`, y se aisló el script RPA `abrir_dashboard.tag` para evitar filtraciones de IDs en Git.
+  6. **Control de Instancia Única y Concurrencia (`bot.lock`):** Se agregó un mecanismo de mutex por bloqueo de archivo (`msvcrt`) y terminación limpia de procesos huérfanos anteriores para evitar ejecuciones duplicadas del bot.
+
+- **¿Por qué?:**
+  En la Etapa 1, la carga de gastos requería que el usuario redactara manualmente el texto de cada compra. La captura automática mediante foto de tickets/facturas era la principal mejora futura planteada. Implementarla mediante el motor SikuliX/Tesseract de TagUI cumple con el requisito de integración RPA de la cátedra, combinándolo con la inteligencia de los LLMs para sanear errores de lectura óptica y estructurar la información sin fricción para el usuario.
+
+### Instrucciones de Uso Actualizadas (Updated Usage Instructions)
+
+- **Requisitos adicionales para OCR:**
+  - Tener instalado **Java** (JRE de 64 bits en el `PATH` del sistema) necesario para ejecutar el motor SikuliX:
+    - [Link para descargar Java (Oracle)](https://www.java.com/es/download/).
+  - Tener instalado **TagUI** (se recomienda descomprimir en `C:\tagui` de modo que la carpeta `src` quede en `C:\tagui\src`, o bien definir la variable `TAGUI_DIR` en el `.env`):
+    - [Repositorio de TagUI en GitHub para instalarlo](https://github.com/aisingapore/TagUI).
+- **Nuevas interacciones en Telegram:**
+  - **Envío de comprobantes:** Sacale una foto a un ticket o factura y enviala al chat (podés agregar una nota en el mensaje como *"almuerzo de trabajo"*).
+  - El bot responderá con los datos detectados por el OCR y el LLM, desplegando el teclado interactivo con opciones:
+    - `✅ Sí, guardar` / `❌ No, cancelar`
+    - `✏️ Editar Moneda` / `✏️ Editar Categoría`
+    - `📅 Editar Fecha` / `📝 Editar Descripción`
+- **Variables de entorno opcionales en `.env`:**
+  - `TAGUI_DIR` (opcional, por defecto `C:\tagui\src`): ruta al directorio `src` de instalación de TagUI.
+
+### Información Adicional – Etapa 2
+
+- **Decisiones técnicas y desafíos resueltos:**
+  - **Integración Java/SikuliX sin ventana emergente:** SikuliX se ejecuta mediante un subproceso silencioso (`CREATE_NO_WINDOW`) inyectando dinámicamente `jython-standalone-2.7.1.jar` y redirigiendo la captura a un log local (`tagui/ocr_sikuli.log`) para depuración en caso de fallos.
+  - **Tolerancia a ruido óptico en tickets:** Los tickets reales suelen tener caracteres cortados, tinta tenue o saltos de línea irregulares. En lugar de procesar el texto con expresiones regulares rígidas, se delega la normalización al LLM con un prompt especializado que reconoce patrones de tickets fiscales.
+- **Limitaciones restantes:**
+  - La velocidad del OCR depende de la respuesta del motor Java/SikuliX en la máquina host (suele tardar entre 3 y 8 segundos por imagen).
+  - Imágenes muy borrosas o con iluminación deficiente pueden impedir que Tesseract reconozca texto legible, caso en el cual el bot notifica al usuario para que reintente con una foto más clara.
+
+### Próximas Mejoras / Trabajo Futuro
+
+- **Gestión de Concurrencia y Sesiones Aisladas en OCR:**
+  - **Problema actual:** El pipeline de OCR utiliza rutas de archivos fijas (`ticket_actual.png`, `ocr_resultado.txt`), lo que provoca que peticiones concurrentes de múltiples usuarios se pisen y sobreescriban entre sí durante la ejecución de SikuliX.
+  - **Posible solución:**
+    - Reemplazar los archivos estáticos por directorios temporales únicos con identificadores UUID por mensaje/usuario (`tempfile`).
+    - Incorporar un mecanismo de encolamiento asíncrono (`asyncio.Queue` o semáforo con `asyncio.Lock`) para serializar el uso intensivo de CPU/Java y garantizar que cada comprobante se procese de punta a punta de forma aislada e íntegra.

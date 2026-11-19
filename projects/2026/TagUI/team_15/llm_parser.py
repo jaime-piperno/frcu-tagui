@@ -42,6 +42,32 @@ Reglas:
 
 Si no hay un monto claro, devolvé monto 0."""
 
+PROMPT_SISTEMA_OCR = f"""Sos un asistente que analiza el texto extraído por OCR de un ticket, recibo, factura o comprobante de pago y lo convierte en un gasto estructurado.
+
+El texto proviene de un motor OCR (TagUI / SikuliX), por lo que puede contener errores tipográficos, caracteres sueltos, CUIT, IVA, subtotales, vuelto, direcciones o números de comprobante.
+Hoy es {HOY}.
+Respondé SOLO con JSON válido (sin texto adicional, sin markdown): una LISTA con UN solo objeto que represente el gasto total del comprobante (salvo que la nota del usuario pida explícitamente otra cosa).
+Forma: [{{"descripcion": "...", "monto": 1234.56, "moneda": "ARS", "categoria": "comida", "fecha": "YYYY-MM-DD"}}]
+
+Reglas:
+- monto: número positivo correspondiente al IMPORTE TOTAL / TOTAL A PAGAR del comprobante. Ignorá números de factura, CUIT, teléfono, código postal, porcentajes de IVA, subtotales parciales o el vuelto. Prestá atención a los separadores de miles y decimales (ej: en tickets argentinos "15.400,00" es 15400).
+- descripcion: texto corto (max 40 caracteres) con el nombre del comercio, empresa o concepto principal del comprobante (priorizá la nota del usuario si aporta una descripción).
+- moneda: una de estas opciones: {", ".join(MONEDAS)}. Si aparece "$", "ARS" o "PESOS" sin especificar otra divisa, usá "ARS". Si aparece "USD", "U$S" o "DOLARES", usá "USD". Por defecto ARS.
+- fecha: en formato YYYY-MM-DD. Si el comprobante muestra una fecha válida de emisión, convertila a YYYY-MM-DD. Si no se distingue ninguna fecha clara o parece un error de lectura del OCR, usá HOY ({HOY}).
+- categoria: UNA de estas opciones: {", ".join(CATEGORIAS)}.
+  - comida: comidas, supermercado, autoservicio, restaurantes, bares, cafeterías, panadería, delivery.
+  - transporte: uber, taxi, colectivo, subte, nafta, combustible, YPF, Shell, Axion, peajes, estacionamiento.
+  - vivienda: alquiler, expensas, servicios (luz, agua, internet, gas), impuestos.
+  - salud: farmacia, médicos, dentista, medicamentos.
+  - educacion: universidad, cursos, libros, cuotas.
+  - entretenimiento: cine, streaming, juegos, conciertos, salidas, joda, boliche, barras, alcohol.
+  - ropa: ropa y calzado.
+  - electrodomesticos: electrodomésticos, tecnología, artículos del hogar.
+  - salario: sueldos o ingresos.
+  - otros: si no encaja en ninguna.
+
+Si no hay un monto claro en el texto del OCR, devolvé monto 0."""
+
 
 _cliente = None
 
@@ -89,16 +115,19 @@ def _parsear_json(texto: str) -> list:
         contenido = re.sub(r"\s*```$", "", contenido)
     datos = json.loads(contenido)
     if isinstance(datos, dict):
+        for v in datos.values():
+            if isinstance(v, list):
+                return v
         datos = [datos]
     return datos
 
 
-def interpretar_llm(texto: str) -> list:
+def interpretar_llm(texto: str, prompt_sistema: str = PROMPT_SISTEMA) -> list:
     for intento in range(1, MAX_REINTENTOS + 1):
         try:
             response = _obtener_cliente().models.generate_content(
                 model=MODELO,
-                contents=f"{PROMPT_SISTEMA}\n\nGasto del usuario: {texto}",
+                contents=f"{prompt_sistema}\n\nGasto del usuario: {texto}",
             )
             datos = _parsear_json(response.text)
             return [_normalizar_objeto(d) for d in datos]
@@ -118,7 +147,7 @@ def _clave_gemini_valida() -> bool:
     return bool(clave) and "..." not in clave and len(clave) >= 10
 
 
-def interpretar_openrouter(texto: str) -> list:
+def interpretar_openrouter(texto: str, prompt_sistema: str = PROMPT_SISTEMA) -> list:
     """Interpreta con OpenRouter (API compatible con OpenAI)."""
     modelos = list(dict.fromkeys([
         config.OPENROUTER_MODELO,
@@ -140,7 +169,7 @@ def interpretar_openrouter(texto: str) -> list:
                     json={
                         "model": modelo,
                         "messages": [
-                            {"role": "system", "content": PROMPT_SISTEMA},
+                            {"role": "system", "content": prompt_sistema},
                             {"role": "user", "content": texto},
                         ],
                         "response_format": {"type": "json_object"},
@@ -229,3 +258,32 @@ def interpretar(texto: str) -> list:
             if len(unicos) > len(gastos):
                 gastos = unicos
     return gastos
+
+
+def interpretar_ocr(texto_ocr: str, nota_usuario: str = "") -> list:
+    """Interpreta el texto extraído por OCR de un ticket o factura. Devuelve una lista de Gasto."""
+    if not texto_ocr or not texto_ocr.strip():
+        raise ValueError("El texto extraído por OCR está vacío.")
+
+    entrada = f"Texto extraído del ticket por OCR:\n{texto_ocr.strip()}"
+    if nota_usuario and nota_usuario.strip():
+        entrada += f"\n\nNota adicional del usuario: {nota_usuario.strip()}"
+
+    if config.OPENROUTER_API_KEY:
+        if not _clave_openrouter_valida():
+            raise ValueError(
+                "La OPENROUTER_API_KEY en .env está incompleta o es inválida. "
+                "Pegá la key completa (empieza con sk-or-v1-)."
+            )
+        return interpretar_openrouter(entrada, prompt_sistema=PROMPT_SISTEMA_OCR)
+    elif config.GEMINI_API_KEY:
+        if not _clave_gemini_valida():
+            raise ValueError(
+                "La GEMINI_API_KEY en .env está incompleta. Revisala."
+            )
+        return interpretar_llm(entrada, prompt_sistema=PROMPT_SISTEMA_OCR)
+    else:
+        raise RuntimeError(
+            "No hay ninguna API key configurada. Definí OPENROUTER_API_KEY "
+            "o GEMINI_API_KEY en .env"
+        )

@@ -14,6 +14,16 @@ venv/
 *.tmp
 *.old
 bot.lock
+estado_bot.txt
+
+# Temporales de TagUI y OCR (SikuliX)
+tagui/ticket_actual.png
+tagui/ocr_resultado.txt
+tagui/ocr_error.txt
+tagui/ocr_ticket.sikuli/
+tagui/*.raw
+tagui/*.js
+tagui/abrir_dashboard.tag
 
 # Entorno
 .python-version
