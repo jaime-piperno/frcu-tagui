@@ -1,0 +1,7 @@
+modo,producto_solicitado,nombre_encontrado,precio,supermercado,url,fecha,stock_status,cantidad,unidad
+individual,Sprite Lima Limón 2.25 L,"Gaseosa lima limón Sprite 2,25 lts","$ 4.575,00 c/u",Carrefour,https://www.carrefour.com.ar/gaseosa-lima-limon-sprite-225-lts-17427/p,2026-11-09,DISPONIBLE,2.25,L
+individual,Sprite Lima Limón 2.25 L,"Gaseosa SPRITE Lima-Limón 2,25 Lt","$6.100,00",COTO,https://www.coto.com.ar/productos/gaseosa-sprite-lima-limon-2-25-lt-/_/R-00014451-00014451-200,2026-11-09,DISPONIBLE,2.25,L
+individual,Sprite Lima Limón 2.25 L,"Gaseosa Sprite Lima-Limón 2,25 Lt.",$ 6.100,Día %,https://diaonline.supermercadosdia.com.ar/gaseosa-sprite-lima-limon-225-lt-14847/p,2026-11-09,DISPONIBLE,2.25,L
+"compra_mes","Coca Cola","Gaseosa cola Coca Cola sabor original 2,25 lts","$ 4.575,00 c/u","Carrefour","https://www.carrefour.com.ar/gaseosa-cola-coca-cola-sabor-original-225-lts-30138/p","2026-11-09","DISPONIBLE","2.25","L"
+"compra_mes","Coca Cola","Gaseosa Coca-Cola Sabor Original 2,25 Lt","$4.575,00","COTO","https://www.coto.com.ar/productos/gaseosa-coca-cola-sabor-original-2-25-lt-/_/R-00014450-00014450-200","2026-11-09","DISPONIBLE","2.25","L"
+"compra_mes","Coca Cola","Gaseosa Coca-Cola Sabor Original 2.25 Lt.","$ 6.100","Día %","https://diaonline.supermercadosdia.com.ar/gaseosa-coca-cola-sabor-original-225-lt-14837/p","2026-11-09","DISPONIBLE","2.25","L"
