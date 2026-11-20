@@ -16,13 +16,13 @@ def cancel(reason):
     with open(CANCEL_FILE, 'w', encoding='utf-8') as handle:
         handle.write(reason)
     record('cancelled', reason=reason)
-    raise RuntimeError('COMPARASUPLE_CANCELLED: ' + reason)
+    raise RuntimeError('GRUPO12_CANCELLED: ' + reason)
 
 
 def check_cancelled():
     if os.path.exists(CANCEL_FILE):
         with open(CANCEL_FILE, encoding='utf-8') as handle:
-            raise RuntimeError('COMPARASUPLE_CANCELLED: ' + handle.read())
+            raise RuntimeError('GRUPO12_CANCELLED: ' + handle.read())
     if user32.GetAsyncKeyState(0x1B) & 0x8000:
         cancel('Modo humano detenido con Escape')
 
@@ -77,8 +77,8 @@ def window_pid(hwnd):
 
 
 def browser_window():
-    wanted = int(os.environ['COMPARASUPLE_BROWSER_PID'])
-    selected = os.environ.get('COMPARASUPLE_BROWSER_HWND')
+    wanted = int(os.environ['GRUPO12_BROWSER_PID'])
+    selected = os.environ.get('GRUPO12_BROWSER_HWND')
     # El motor entrega el HWND exacto; nunca elegir otra ventana del mismo Chrome.
     if not selected:
         cancel('Falta identificar la ventana propia del comparador')
@@ -115,7 +115,7 @@ def check_focus():
     hwnd = browser_window()
     foreground = user32.GetForegroundWindow()
     foreground_pid = window_pid(foreground)
-    if foreground != hwnd and foreground_pid == int(os.environ['COMPARASUPLE_BROWSER_PID']) and owned_popup(foreground, hwnd):
+    if foreground != hwnd and foreground_pid == int(os.environ['GRUPO12_BROWSER_PID']) and owned_popup(foreground, hwnd):
         # Sólo cerrar un aviso reconocido que pertenece a esta ventana.
         popup = foreground
         closed = _scan_browser_notices(hwnd, popup)
@@ -123,15 +123,15 @@ def check_focus():
         foreground = user32.GetForegroundWindow()
         foreground_pid = window_pid(foreground)
         deadline = time.monotonic() + .4
-        while (closed and foreground == popup and foreground_pid == int(os.environ['COMPARASUPLE_BROWSER_PID'])
+        while (closed and foreground == popup and foreground_pid == int(os.environ['GRUPO12_BROWSER_PID'])
                and owned_popup(foreground, hwnd) and time.monotonic() < deadline):
             time.sleep(.05)
             check_cancelled()
             foreground = user32.GetForegroundWindow()
             foreground_pid = window_pid(foreground)
-    if foreground_pid != int(os.environ['COMPARASUPLE_BROWSER_PID']) or foreground != hwnd:
+    if foreground_pid != int(os.environ['GRUPO12_BROWSER_PID']) or foreground != hwnd:
         record('focus_lost', expected=int(hwnd), foreground=int(foreground or 0),
-               foreground_pid=foreground_pid, browser_pid=int(os.environ['COMPARASUPLE_BROWSER_PID']),
+               foreground_pid=foreground_pid, browser_pid=int(os.environ['GRUPO12_BROWSER_PID']),
                expected_window=window_diagnostic(hwnd), foreground_window=window_diagnostic(foreground))
         cancel('Modo humano detenido: el navegador perdió el foco')
     if not user32.IsZoomed(hwnd):
@@ -150,7 +150,7 @@ def click():
 def focus_window():
     check_cancelled()
     # No recuperar el foco a costa de otra aplicación elegida por el usuario.
-    if os.environ.get('COMPARASUPLE_ACTIVATE_BROWSER') != '1':
+    if os.environ.get('GRUPO12_ACTIVATE_BROWSER') != '1':
         check_focus()
         return
     hwnd = browser_window()
@@ -188,9 +188,9 @@ def focus_window():
             hit = user32.WindowFromPoint(wintypes.POINT(x, y))
             owner_pid = window_pid(hit)
             own_window = user32.GetAncestor(hit, 2) == hwnd
-            if owner_pid != int(os.environ['COMPARASUPLE_BROWSER_PID']) or not own_window:
+            if owner_pid != int(os.environ['GRUPO12_BROWSER_PID']) or not own_window:
                 record('activation_blocked', owner_pid=owner_pid,
-                       browser_pid=int(os.environ['COMPARASUPLE_BROWSER_PID']), x=x, y=y,
+                       browser_pid=int(os.environ['GRUPO12_BROWSER_PID']), x=x, y=y,
                        rect=[rect.left, rect.top, rect.right, rect.bottom], topmost=True)
                 raise RuntimeError('Otra ventana cubre la barra del navegador')
             user32.SetCursorPos(x, y)
@@ -212,7 +212,7 @@ if (-not (Test-Path -LiteralPath $noticeLibrary)) {
 Add-Type -OutputAssembly $noticeLibrary -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
-public static class ComparaSupleNoticeWindow {
+public static class Grupo12NoticeWindow {
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);
@@ -226,12 +226,12 @@ function OwnedNotice {
     if ($NoticeHandle -eq $BrowserHandle) { return $true }
     [uint32]$browserPid = 0
     [uint32]$noticePid = 0
-    $null = [ComparaSupleNoticeWindow]::GetWindowThreadProcessId([IntPtr]$BrowserHandle, [ref]$browserPid)
-    $null = [ComparaSupleNoticeWindow]::GetWindowThreadProcessId([IntPtr]$NoticeHandle, [ref]$noticePid)
+    $null = [Grupo12NoticeWindow]::GetWindowThreadProcessId([IntPtr]$BrowserHandle, [ref]$browserPid)
+    $null = [Grupo12NoticeWindow]::GetWindowThreadProcessId([IntPtr]$NoticeHandle, [ref]$noticePid)
     if (-not $browserPid -or $noticePid -ne $browserPid) { return $false }
     $owner = [IntPtr]$NoticeHandle
     for ($level = 0; $level -lt 16; $level++) {
-        $owner = [ComparaSupleNoticeWindow]::GetWindow($owner, 4)
+        $owner = [Grupo12NoticeWindow]::GetWindow($owner, 4)
         if ($owner -eq [IntPtr]$BrowserHandle) { return $true }
         if ($owner -eq [IntPtr]::Zero) { break }
     }
@@ -240,7 +240,7 @@ function OwnedNotice {
 if (-not (OwnedNotice)) { 'unavailable'; exit }
 $noticeScale = 1.0
 try {
-    $dpi = [ComparaSupleNoticeWindow]::GetDpiForWindow([IntPtr]$BrowserHandle)
+    $dpi = [Grupo12NoticeWindow]::GetDpiForWindow([IntPtr]$BrowserHandle)
     if ($dpi -ge 96 -and $dpi -le 384) { $noticeScale = $dpi / 96.0 }
 } catch { }
 $root = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]$NoticeHandle)
@@ -288,8 +288,8 @@ for ($attempt = 0; $attempt -lt 3; $attempt++) {
             }
             if ($bounds.Height -gt 0 -and $bounds.Height -le 420 * $noticeScale -and $close.Count -eq 1 -and
                     $permission.Count -eq 0 -and $support) {
-                if ([ComparaSupleNoticeWindow]::GetForegroundWindow() -ne [IntPtr]$NoticeHandle -or
-                        -not [ComparaSupleNoticeWindow]::IsZoomed([IntPtr]$BrowserHandle) -or -not (OwnedNotice)) {
+                if ([Grupo12NoticeWindow]::GetForegroundWindow() -ne [IntPtr]$NoticeHandle -or
+                        -not [Grupo12NoticeWindow]::IsZoomed([IntPtr]$BrowserHandle) -or -not (OwnedNotice)) {
                     'unavailable'
                     exit
                 }
@@ -325,11 +325,9 @@ def _scan_browser_notices(hwnd, notice_hwnd=None):
     encoded = base64.b64encode(command.encode('utf-16-le')).decode('ascii')
     started = time.monotonic()
     category, returncode = None, None
-    # La primera llamada compila la DLL auxiliar; en un equipo lento puede superar los 5 s habituales.
-    timeout = 5 if os.path.exists('browser_notice_owners.dll') else 30
     try:
         result = subprocess.run([shell, '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
-                                capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+                                capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
         returncode = result.returncode
         state = result.stdout.decode(errors='replace').strip() if returncode == 0 else 'unavailable'
         if returncode:
@@ -352,13 +350,13 @@ def _scan_browser_notices(hwnd, notice_hwnd=None):
 
 def dismiss_browser_notices(force=False):
     """Cierra avisos conocidos de Chrome; no cambia preferencias ni permisos."""
-    if not os.environ.get('COMPARASUPLE_BROWSER_HWND'):
+    if not os.environ.get('GRUPO12_BROWSER_HWND'):
         return False
     before = _notice_closed_count
     hwnd = check_focus()
     if before != _notice_closed_count:
         return True
-    if not force and _notice_checked_at is not None and time.monotonic() - _notice_checked_at < 4:
+    if not force and _notice_checked_at is not None and time.monotonic() - _notice_checked_at < 8:
         return False
     closed = _scan_browser_notices(hwnd)
     check_focus()
