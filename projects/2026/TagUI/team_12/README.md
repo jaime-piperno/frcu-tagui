@@ -430,14 +430,3 @@ A partir del comparador base desarrollado en la Etapa 1 (Grupo 12), el **Grupo 1
 * **Protocolo y Documentación Antibots para Mercado Libre:**
   * Se investigó y documentó el comportamiento de la tasa de intentos de Mercado Libre (*"Alcanzaste el límite de intentos"* / *rate limiting*).
   * Se orientó el uso del flag nativo [`--chrome-actual`](codigo/main.py) con depuración remota (`chrome://inspect/#remote-debugging`), lo que permite al bot conectarse a la sesión activa y confiable del navegador habitual del usuario sin requerir ingresos manuales ni reingreso de credenciales.
-
----
-
-### 5. 📑 Presentación Ejecutiva y Defensa Oral
-
-* Se elaboró el documento de soporte para la defensa del proyecto: [`presentacion_tp_automatizacion_g11.pdf`](presentacion_tp_automatizacion_g11.pdf), estructurado en:
-  * **Páginas 01 a 06:** Diagnóstico del sistema base y propuesta de valor del agente proactivo.
-  * **Página 07:** Gestión de seguridad, variables de entorno y anillo de secretos (`.env` + `.gitignore`).
-  * **Página 08:** Arquitectura modular, Patrón Facade y limitaciones de tamaño en Telegram API.
-  * **Página 09:** Testing unitario aislado (< 2 segundos) y Principio de No Interrupción.
-  * **Página 10:** Conclusiones y balance de la automatización.
