@@ -57,7 +57,7 @@ El lanzador `tagui/INICIAR ComparaSuple.cmd` y los archivos del proyecto están 
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `codigo/main.py` | Catálogo, menú, orden de tiendas y reanudación. |
+| `codigo/main.py` | Catálogo, menú, orden de tiendas, progreso en consola y reanudación. |
 | `codigo/engine.py`, `codigo/runtime_tagui.py`, `codigo/chrome_actual.php` | Ubicación y preparación de TagUI, ejecución de los flujos y conexión con Chrome. |
 | `codigo/human_input.py` | Entrada real de mouse y teclado, geometría, foco y avisos nativos. |
 | `flujos/*.tag`, `flujos/comun/`, `flujos/apoyo.js` | Flujo de cada tienda y acciones de navegación compartidas. |
@@ -66,8 +66,10 @@ El lanzador `tagui/INICIAR ComparaSuple.cmd` y los archivos del proyecto están 
 | `codigo/capturas.py`, `codigo/procesar.py` | Guardado independiente por tienda y validación posterior de los JSON. |
 | `codigo/workbook_portable.py` | Presentación y escritura del Excel. |
 | `codigo/proveedores.py`, `codigo/iniciar_sesion.py` | Configuración de tiendas, destinos permitidos y comprobación de sesión. |
+| `codigo/notificaciones.py` | *(Etapa 2 - Grupo 11)* Módulo de alertas automáticas para Telegram con patrón Facade. |
+| `codigo/test_notificaciones.py` | *(Etapa 2 - Grupo 11)* Suite de pruebas unitarias para notificaciones con mocks (< 2s). |
 | `config.json` | Tiendas, adaptadores, consultas, acceso de Ultimax y límite de páginas. |
-| `entrada/Productos.xlsx` | Catálogo de productos a consultar. |
+| `entrada/Productos Grupo12.xlsx` | Catálogo sanitizado de productos a consultar (respaldo en `Productos Grupo12.backup.xlsx`). |
 
 ---
 
@@ -209,6 +211,7 @@ Para reanudar, mantener el catálogo y los proveedores de la ejecución original
 | `--espera-intervencion SEGUNDOS` | Tiempo para resolver un CAPTCHA o un ingreso en modo visible. Por defecto, 300; con 0 se omite la tienda. |
 | `--chrome-actual` | Usa el Chrome habitual aunque no se consulte Mercado Libre. |
 | `--iniciar-sesion` | Sólo comprueba o inicia la sesión de Mercado Libre en el Chrome habitual. |
+| `--sin-notificar` | Omitir el envío automático de alertas a Telegram al finalizar. |
 
 Variables de entorno opcionales:
 
@@ -218,6 +221,10 @@ Variables de entorno opcionales:
 | `COMPARASUPLE_PYTHON` | Python que usa el lanzador, en lugar de `py -3` o `python`. |
 | `COMPARASUPLE_BROWSER` | Ruta del navegador, si Chrome o Edge no están instalados en la ubicación habitual. |
 | `COMPARASUPLE_ULTIMAX_CLAVE` | Reemplaza la clave de Ultimax de `config.json`. |
+| `TELEGRAM_BOT_TOKEN` | Token del bot de Telegram para alertas de mejores ofertas. |
+| `TELEGRAM_CHAT_ID` | Identificador de chat o grupo receptor en Telegram. |
+| `TELEGRAM_NOTIFY_ENABLED` | Activa o desactiva las alertas (`true`/`false`). Por defecto `true`. |
+| `TELEGRAM_TIMEOUT_SECONDS` | Tiempo límite de espera para la API de Telegram (por defecto `10`). |
 
 ### 5. Catálogo de entrada
 
@@ -322,10 +329,115 @@ Tres conceptos de automatización aplicados al sistema:
 - El alcance de búsqueda es limitado: `max_pages` está configurado en **2**. Además existen límites de candidatos y fichas para acotar el tiempo. Por eso **“menor precio” significa menor precio confirmado entre los resultados examinados**, no el mínimo de todas las publicaciones de Internet o de Mercado Libre. No se garantiza completar todos los productos si una tienda bloquea las consultas.
 - La automatización reduce la carga de trabajo manual, pero una comparación errónea podría llevar a una mala decisión de compra o venta. La revisión de variantes dudosas, la separación de errores y los enlaces a las fuentes permiten controlar ese riesgo. Las credenciales personales permanecen en el navegador; no deben incluirse perfiles, cookies ni sesiones en una entrega del proyecto.
 
-### Mejora propuesta para la segunda etapa
+### Mejora de la segunda etapa (Implementada por Grupo 11)
 
-Se propone incorporar **notificaciones por Telegram**, tanto del cierre de una ejecución como de variaciones relevantes de precio. Esta función todavía no está implementada.
+> [!NOTE]
+> **Estado:** Implementada y operativa por el **Grupo 11**. Ver la sección completa [🚀 Etapa 2 – Actualización y Mejoras (Grupo 11)](#-etapa-2--actualización-y-mejoras-grupo-11) a continuación.
 
-El módulo de notificaciones podría consumir los resultados consolidados, comparar capturas del mismo producto y proveedor y avisar cuando un precio confirmado cambie por encima de un umbral configurable. También podría informar errores que requieran intervención, adjuntando la tienda y el motivo sin enviar credenciales ni información de la cuenta.
+En la segunda etapa, el **Grupo 11** transformó la herramienta incorporando el sistema proactivo de **notificaciones automáticas por Telegram** (`notificaciones.py`), filtrando las mejores ofertas con stock confirmado y variante idéntica, gestionando credenciales seguras mediante `.env` y garantizando tolerancia a fallos mediante el principio de no interrupción.
 
-La mejora necesitaría definir destinatarios, umbrales y un mecanismo para evitar avisos duplicados. El token se configuraría fuera del código. Para comprobarla, se deberían probar una variación válida, una ejecución sin cambios y un error de consulta, verificando que sólo se emita la notificación correspondiente. Esto extendería la retroalimentación del proceso al usuario y facilitaría el seguimiento entre ejecuciones. Su alcance deberá validarse con los docentes antes de implementarlo en la segunda etapa.
+---
+
+# 🚀 Etapa 2 – Actualización y Mejoras (Grupo 11)
+
+## 👥 Equipo de Actualización (Grupo 11)
+
+El trabajo de actualización y optimización correspondiente a la **Etapa 2** fue llevado a cabo por el **Grupo 11**, integrado por:
+
+- **Carrasco, Fabiana**
+- **Gómez Kehler, Thiago**
+- **Ortiz, Facundo**
+- **Pighetti, Luciano**
+- **Torres Reyes, Sofía**
+
+---
+
+## 📌 Resumen de Cambios y Optimizaciones Realizadas
+
+A partir del comparador base desarrollado en la Etapa 1 (Grupo 12), el **Grupo 11** implementó mejoras integrales que abarcan la incorporación de un agente proactivo de mensajería, la sanitización del catálogo de datos, la estabilización del motor TagUI y optimizaciones en la experiencia de usuario y telemetría.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        EVOLUCIÓN DEL PROYECTO                          │
+├──────────────────────────────────┬─────────────────────────────────────┤
+│      ETAPA 1 (Base Grupo 12)     │       ETAPA 2 (Mejora Grupo 11)     │
+├──────────────────────────────────┼─────────────────────────────────────┤
+│ • Enfoque Pasivo (Excel local)   │ • Enfoque Proactivo (Push Telegram) │
+│ • Filtrado manual por usuario    │ • Detección automática min(price)   │
+│ • Catálogo con ruido comercial   │ • Catálogo sanitizado (100% specs)  │
+│ • Bloqueo en headless directo    │ • Fix scoping grupo12_direct        │
+│ • Terminal sin avance porcentual │ • Telemetría en tiempo real [X% ]   │
+│ • Riesgo de procesos colgados    │ • Flags saneados y timeouts seguros │
+└──────────────────────────────────┴─────────────────────────────────────┘
+```
+
+---
+
+### 1. 📲 Módulo Proactivo de Notificaciones en Telegram (`codigo/notificaciones.py`)
+
+* **De Pasivo a Proactivo:** En la versión original, el usuario debía esperar a que finalice la corrida para abrir manualmente un archivo Excel extenso y buscar las oportunidades. Con la integración de Telegram, el sistema toma un rol activo y despacha al instante la mejor oferta confirmada para cada producto.
+* **Patrón de Diseño Facade (Fachada):** Se implementó una interfaz desacoplada para evitar contaminar el scraping (`TagUI`) y el generador de reportes (`procesar.py`). A través de una única función de alto nivel, [`notificar_mejores_ofertas(payload)`](codigo/notificaciones.py), se orquesta todo el flujo de mensajería:
+  1. `filtrar_mejores_ofertas(payload)`: Examina el resultado consolidado y extrae únicamente las consultas con `status == 'ok'`, descartando publicaciones dudosas (`revisar`) o sin stock confirmado (`incompleta`). Agrupa por producto y selecciona el menor precio del mercado (`min(price)`).
+  2. `construir_mensaje_telegram(ofertas)`: Genera el cuerpo del mensaje en formato HTML limpio para Telegram. Incluye nombre del producto, marca, tienda ganadora, precio con formato monetario argentino (`$ 35.000,00`) y un enlace directo a la publicación.
+  3. **Fragmentación Automática (Chunking):** Para cumplir estrictamente con la restricción de **4096 caracteres** de la API de Telegram, la función divide automáticamente el informe en múltiples fragmentos cuando la cantidad de ofertas excede el límite, impidiendo errores `400 Bad Request`.
+  4. `enviar_alerta_telegram(...)`: Emite las solicitudes HTTP `POST /sendMessage` a `api.telegram.org`. Posee arquitectura con soporte primario para la librería `requests` y conmutación automática de respaldo a `urllib.request` nativo.
+* **Seguridad y Variables de Entorno (Zero Hardcoded Credentials):**
+  * Toda la configuración sensible se gestiona a través de un archivo local `.env` (excluido en `.gitignore`): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_TIMEOUT_SECONDS` y `TELEGRAM_NOTIFY_ENABLED`.
+  * Se implementó lectura automática mediante `python-dotenv` con mecanismo de lectura manual de reserva si la librería no está instalada.
+* **Resiliencia Operativa (Principio de No Interrupción):**
+  * La ejecución de las alertas se inyecta en [`codigo/main.py`](codigo/main.py) inmediatamente después de generar el archivo Excel (`Comparador Grupo12.xlsx`).
+  * Toda la llamada está encapsulada en un bloque `try-except`. Si ocurre un microcorte de internet, un fallo en la API de Telegram o un timeout, el error se registra como un log informativo en consola: **el Excel y la corrida del RPA quedan 100% a salvo y no se interrumpen**.
+* **Arnés de Pruebas Unitarias Aislado (`codigo/test_notificaciones.py`):**
+  * Se desarrolló una batería de tests con `unittest` que evalúa el filtrado de ofertas, el formateo de moneda, la fragmentación de mensajes y los envíos simulados mediante `unittest.mock`.
+  * Ejecuta en **menos de 2 segundos** sin requerir conexión a internet, sin abrir Chrome y sin invocar TagUI.
+
+---
+
+### 2. 🧹 Sanitización del Catálogo Excel (`entrada/Productos Grupo12.xlsx`)
+
+* **Diagnóstico de Consultas Fallidas:** Se detectó que la gran mayoría de las consultas en tiendas basadas en Tiendanube (CB Deportes, Morashop, Disfit y ProteViking) finalizaban con el estado *"no encontrado en buscador"*. El origen radicaba en que los nombres de los productos contenían ruido comercial y notas de distribuidora (`(+ Enzyme)`, `(+ Extra leucina)`, `sin tacc`, `DOYPACK`, `EEUU`, `POWERADED - 60 Days`, `NUEVO LANZAMIENTO`, etc.). Tiendanube realiza búsquedas booleanas `AND` estrictas, por lo que una sola palabra discordante provocaba cero resultados.
+* **Sanitización del Catálogo:**
+  * Se sanitizaron los 40 productos activos del archivo oficial [Productos Grupo12.xlsx](entrada/Productos%20Grupo12.xlsx).
+  * Se normalizaron marcas a su denominación comercial estándar (ej. `Star Nutrition` en vez de `Star`).
+  * Se preservó el 100% de la semántica original: se comprobó con [`matching.specs()`](codigo/matching.py) que todos los productos mantengan exactamente sus especificaciones (línea, peso, formato, unidades, sabor).
+  * Se generó un archivo de respaldo intacto en [Productos Grupo12.backup.xlsx](entrada/Productos%20Grupo12.backup.xlsx).
+* **Modo de Consulta Compacto:** Se actualizó [config.json](config.json) para que **CB Deportes** utilice `"query_mode": "compact"` (igual que Morashop, Disfit y ProteViking), optimizando los términos enviados al buscador de la tienda.
+
+---
+
+### 3. ⚙️ Correcciones de Estabilidad y Motor TagUI
+
+* **Fix de Variable No Definida (`grupo12_direct`):**
+  * Se corrigió el error `ERROR - can't find variable: grupo12_direct` que interrumpía las consultas en segundo plano. Se inicializó la variable globalmente en [`flujos/apoyo.js`](flujos/apoyo.js) y se ajustó su declaración de ámbito en [`flujos/comun/consulta.tag`](flujos/comun/consulta.tag), permitiendo la navegación directa por URL en modo headless.
+* **Optimización de Tiempos en Segundo Plano:**
+  * Se redujeron a la mitad las esperas (`sleeps`) fijas en modo headless dentro de `apoyo.js`, acelerando considerablemente la velocidad de relevamiento.
+* **Saneamiento del Lanzador (`INICIAR Grupo12.cmd`):**
+  * Se removió el parámetro obsoleto `-B` en las ejecuciones de PHP que provocaba bloqueos intermitentes de procesos en Windows.
+* **Estabilización de UI Automation (`codigo/human_input.py`):**
+  * Se ajustó el tiempo de debounce a 8 segundos para evitar spam de alertas en PowerShell al supervisar ventanas y avisos nativos.
+
+---
+
+### 4. 📊 Experiencia de Usuario, CLI y Telemetría
+
+* **Indicador de Avance Porcentual en Tiempo Real:**
+  * Se incorporó el cálculo dinámico y la impresión del porcentaje de avance en consola: `[X/Total (Y%)]` tanto en el orquestador principal ([`codigo/main.py`](codigo/main.py)) como en el bucle de consultas ([`codigo/busqueda.py`](codigo/busqueda.py)).
+* **Nuevo Parámetro CLI `--sin-notificar`:**
+  * Permite ejecutar corridas completas o pruebas rápidas desactivando el envío de alertas a Telegram directamente desde la línea de comandos:
+    ```powershell
+    python codigo/main.py --proveedor cbdeportes --demo --sin-notificar
+    ```
+* **Protocolo y Documentación Antibots para Mercado Libre:**
+  * Se investigó y documentó el comportamiento de la tasa de intentos de Mercado Libre (*"Alcanzaste el límite de intentos"* / *rate limiting*).
+  * Se orientó el uso del flag nativo [`--chrome-actual`](codigo/main.py) con depuración remota (`chrome://inspect/#remote-debugging`), lo que permite al bot conectarse a la sesión activa y confiable del navegador habitual del usuario sin requerir ingresos manuales ni reingreso de credenciales.
+
+---
+
+### 5. 📑 Presentación Ejecutiva y Defensa Oral
+
+* Se elaboró el documento de soporte para la defensa del proyecto: [`presentacion_tp_automatizacion_g11.pdf`](presentacion_tp_automatizacion_g11.pdf), estructurado en:
+  * **Páginas 01 a 06:** Diagnóstico del sistema base y propuesta de valor del agente proactivo.
+  * **Página 07:** Gestión de seguridad, variables de entorno y anillo de secretos (`.env` + `.gitignore`).
+  * **Página 08:** Arquitectura modular, Patrón Facade y limitaciones de tamaño en Telegram API.
+  * **Página 09:** Testing unitario aislado (< 2 segundos) y Principio de No Interrupción.
+  * **Página 10:** Conclusiones y balance de la automatización.
