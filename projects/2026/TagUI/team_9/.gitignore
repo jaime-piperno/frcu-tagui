@@ -1,0 +1,21 @@
+node_modules/
+*.log
+temp_input.csv
+*.tag.js
+*.tag.raw
+*.tag.cmd
+__test*.tmp
+~$*
+*.xlsx
+reporte_supermercados.xlsx
+reporte_supermercados_nuevo.xlsx
+evidencia_imagenes.json
+evidencia_imagenes.json.tmp
+
+# Etapa 2 - Grupo 9
+.env
+.idea/
+.DS_Store
+target/
+pom.xml
+alertas_emitidas.jsonl

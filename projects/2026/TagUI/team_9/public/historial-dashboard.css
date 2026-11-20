@@ -1,0 +1,113 @@
+/* historial-dashboard.css - Arreglo de espaciado y textos apretados */
+
+.hist-chart-wrap {
+    position: relative;
+    height: 320px;
+    margin-top: 1rem;
+    background: rgba(10, 15, 28, 0.4);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.hist-vacio {
+    display: none;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #94a3b8);
+    background: rgba(15, 23, 42, 0.6);
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px dashed var(--border-subtle, rgba(255, 255, 255, 0.1));
+    text-align: center;
+}
+
+.hist-tabla-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 340px;
+    margin-top: 1rem;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 12px;
+    background: rgba(10, 15, 28, 0.65);
+}
+
+.hist-tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.84rem;
+    color: var(--text-main, #f8fafc);
+}
+
+.hist-tabla th,
+.hist-tabla td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+    white-space: nowrap;
+}
+
+.hist-tabla th {
+    position: sticky;
+    top: 0;
+    font-weight: 700;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    background: #0f172a;
+    z-index: 2;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hist-tabla td:first-child {
+    white-space: normal;
+    color: #e2e8f0;
+}
+
+.hist-ganador {
+    color: #34d399 !important;
+    font-weight: 700;
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.hist-fila-total td {
+    font-weight: 700;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 2px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.hist-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.hist-badge-baja {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.hist-badge-min {
+    background: rgba(251, 146, 60, 0.15);
+    color: #fb923c;
+    border: 1px solid rgba(251, 146, 60, 0.35);
+}
+
+.hist-texto-resumen {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #c7d2fe;
+}
