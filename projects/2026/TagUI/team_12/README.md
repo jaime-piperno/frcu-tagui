@@ -149,6 +149,20 @@ python -m pip install -r "C:\tagui\ComparaSuple\requirements.txt"
 
 La instalación y la ejecución deben usar el mismo Python. El archivo `.cmd` comprueba la versión y la disponibilidad de `openpyxl` antes de abrir el menú; si falta, ofrece instalarlo con `pip` en ese mismo Python.
 
+#### 2.4. Configurar las notificaciones de Telegram (.env)
+
+> [!IMPORTANT]
+> **Seguridad (Zero Hardcoded Credentials):** El archivo `.env` contiene credenciales personales y **NUNCA debe subirse a Git** (está protegido en `.gitignore`). Para configurar el bot:
+
+1. En la carpeta del proyecto, copiar la plantilla [`.env.example`](.env.example) y nombrarla `.env`:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+2. Abrir `.env` con un editor de texto y completar las dos variables principales:
+   * **`TELEGRAM_BOT_TOKEN`**: Se obtiene en Telegram hablándole a [@BotFather](https://t.me/botfather), enviando el comando `/newbot` y siguiendo las instrucciones (ej: `1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
+   * **`TELEGRAM_CHAT_ID`**: ID del usuario, grupo o canal destinatario (ej: `123456789` o `-1001234567890`). Se puede obtener enviando un mensaje al bot y consultando `https://api.telegram.org/bot<TOKEN>/getUpdates` o mediante bots de utilidad como [@userinfobot](https://t.me/userinfobot).
+3. *(Opcional)* Si no se desea usar Telegram o no se configuran las variables, el sistema continuará funcionando normalmente: generará el archivo Excel y emitirá un log avisando que las alertas fueron omitidas, o bien se puede pasar el flag `--sin-notificar`.
+
 ### 3. Primera ejecución y permisos de Chrome
 
 1. Abrir `INICIAR ComparaSuple.cmd` (por ejemplo, `C:\tagui\INICIAR ComparaSuple.cmd`) y elegir **1. Demo visible**.
