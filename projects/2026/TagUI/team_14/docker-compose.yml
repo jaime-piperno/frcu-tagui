@@ -1,0 +1,36 @@
+services:
+  conciliador-rpa:
+    build: .
+    container_name: rpa_mercadopago
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_PATH=/app/data/conciliaciones.db
+      - TZ=America/Argentina/Buenos_Aires
+      # Se toman del archivo .env (solo las variables que necesita la API; el token del bot no se expone acá)
+      - API_KEY=${API_KEY:-}
+      - BOT_CODIGO_ACCESO=${BOT_CODIGO_ACCESO:-}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/salud', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  bot-telegram:
+    build: .
+    container_name: rpa_mercadopago_bot
+    command: ["python", "bot.py"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - API_URL=http://conciliador-rpa:8000
+      - TZ=America/Argentina/Buenos_Aires
+    depends_on:
+      conciliador-rpa:
+        condition: service_healthy
+    restart: on-failure
