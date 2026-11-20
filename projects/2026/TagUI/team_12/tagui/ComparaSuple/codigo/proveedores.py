@@ -23,16 +23,6 @@ def allowed_url(provider, url):
         return False
 
 
-def ml_parameters(parsed):
-    """MercadoLibre también lleva variantes en el fragmento; el seguimiento no cambia la página."""
-    fields = parse_qs(parsed.query, keep_blank_values=True)
-    if '=' in parsed.fragment:
-        for key, values in parse_qs(parsed.fragment, keep_blank_values=True).items():
-            fields.setdefault(key, []).extend(values)
-    return {key: values for key, values in fields.items()
-            if key not in ('tracking_id', 'position', 'search_layout', 'type', 'sid') and not key.startswith('utm_')}
-
-
 def search_parameters(params):
     # «Todo MercadoLibre» no filtra la búsqueda. Otros valores sí se conservan.
     return {key: values for key, values in params.items()
@@ -55,7 +45,16 @@ def same_url(first, second, provider=None):
     if not provider or provider.get('adapter') != 'mercadolibre':
         return False
 
-    aq, bq = ml_parameters(a), ml_parameters(b)
+    def semantic_query(url):
+        fields = parse_qs(url.query, keep_blank_values=True)
+        if '=' in url.fragment:
+            for key, values in parse_qs(url.fragment, keep_blank_values=True).items():
+                fields.setdefault(key, []).extend(values)
+        return {k: v for k, v in fields.items()
+                if k not in ('tracking_id', 'position', 'search_layout', 'type', 'sid')
+                and not k.startswith('utm_')}
+
+    aq, bq = semantic_query(a), semantic_query(b)
     ap, bp = unquote(a.path).rstrip('/'), unquote(b.path).rstrip('/')
     if a.hostname == b.hostname and a.path == b.path and aq == bq:
         return True
@@ -114,8 +113,14 @@ def capture_matches(data, expected_url, provider, expected_page=None, order_by=N
         parsed = urlparse(url)
         if parsed.hostname != 'listado.mercadolibre.com.ar':
             return None
-        if search_parameters(ml_parameters(parsed)):
-            return None  # Un filtro distinto del inicio de la búsqueda no es la misma página.
+        fields = parse_qs(parsed.query, keep_blank_values=True)
+        if '=' in parsed.fragment:
+            for key, values in parse_qs(parsed.fragment, keep_blank_values=True).items():
+                fields.setdefault(key, []).extend(values)
+        fields = search_parameters(fields)
+        if any(key not in ('tracking_id', 'position', 'search_layout', 'type', 'sid')
+               and not key.startswith('utm_') for key in fields):
+            return None
         found = re.fullmatch('/(' + SEARCH_SLUG + r')(?:_Desde_([1-9]\d*))?(?:_NoIndex_True)?/?', parsed.path)
         if not found or re.search(r'[/_]', unquote(found[1])):
             return None
@@ -147,8 +152,8 @@ def provider_settings(provider):
     if not isinstance(pattern, str) or not pattern or '{' in cleaned or '}' in cleaned:
         raise ValueError('La búsqueda requiere una ruta; {query} o {slug} representa la consulta.')
     secret = settings.get('access_env')
-    if secret is not None and (not isinstance(secret, str) or not re.fullmatch(r'COMPARASUPLE_[A-Z0-9_]+', secret)):
-        raise ValueError('access_env debe nombrar una variable COMPARASUPLE_ válida.')
+    if secret is not None and (not isinstance(secret, str) or not re.fullmatch(r'GRUPO12_[A-Z0-9_]+', secret)):
+        raise ValueError('access_env debe nombrar una variable GRUPO12_ válida.')
     if 'access_password' in settings:
         password = settings['access_password']
         if not isinstance(password, str) or not password or '\x00' in password:
