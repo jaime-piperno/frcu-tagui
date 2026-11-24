@@ -28,7 +28,7 @@ class BrowserDisconnected(RuntimeError):
 def session_profile():
     """Guarda la sesión fuera del proyecto."""
     base = Path(os.environ.get('LOCALAPPDATA') or Path.home() / '.local/share')
-    return base / 'ComparaSuple/perfiles/mercadolibre'
+    return base / 'Grupo12/perfiles/mercadolibre'
 
 
 @contextmanager
@@ -36,7 +36,7 @@ def profile_lock(profile):
     """Evita que dos robots compartan el mismo perfil."""
     profile = Path(profile)
     profile.mkdir(parents=True, exist_ok=True)
-    with (profile / '.comparasuple.lock').open('a+b') as handle:
+    with (profile / '.grupo12.lock').open('a+b') as handle:
         handle.seek(0, 2)
         if handle.tell() == 0:
             handle.write(b'0')
@@ -60,7 +60,7 @@ def profile_lock(profile):
 
 
 def browser_path(chrome_only=False):
-    candidates = [os.environ.get('COMPARASUPLE_BROWSER', '')]
+    candidates = [os.environ.get('GRUPO12_BROWSER', '')]
     for env in ('PROGRAMW6432', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'LOCALAPPDATA'):
         base = Path(os.environ.get(env, 'C:/'))
         candidates.extend([
@@ -79,7 +79,7 @@ def current_chrome_endpoint():
     except (FileNotFoundError, UnicodeError):
         return None
     except OSError as error:
-        raise RuntimeError('No se pudo leer la conexión local de Chrome. Ejecutá ComparaSuple con tu usuario habitual.') from error
+        raise RuntimeError('No se pudo leer la conexión local de Chrome. Ejecutá Grupo12 con tu usuario habitual.') from error
     if (len(parts) < 2 or not parts[0].isdigit() or not 0 < int(parts[0]) < 65536 or
             not parts[1].startswith('/devtools/browser/') or any(c.isspace() for c in parts[1])):
         return None
@@ -207,19 +207,19 @@ def guard_bridge(process):
 
 
 class Engine:
-    def __init__(self, run_dir, headless=False, human=False, profile_template=None, attach_existing=False):
+    def __init__(self, run_dir, headless=False, human=False, credentials=None, profile_template=None, attach_existing=False):
         if human and headless:
             raise ValueError('El modo humano requiere navegador visible.')
         if attach_existing and (headless or profile_template is not None):
             raise ValueError('Chrome actual requiere modo visible y conserva su propio perfil.')
         self.run_dir = Path(run_dir).resolve()
-        self.work = Path(tempfile.mkdtemp(prefix='comparasuple-'))
+        self.work = Path(tempfile.mkdtemp(prefix='grupo12-'))
         self.processes = []
         self.handles = []
         self.headless = headless
         self.human = human
         self.human_started = False
-        self.credentials = {}  # main.py las asigna después de crear la captura.
+        self.credentials = dict(credentials or {})
         self.profile_template = Path(profile_template).resolve() if profile_template is not None else None
         self.profile_guard = None
         self.chrome = None
@@ -260,7 +260,7 @@ class Engine:
         browser = browser_path(chrome_only=self.attach_existing)
         if not browser:
             raise RuntimeError('No encuentro Google Chrome estable. Instalalo para usar este modo.' if self.attach_existing
-                               else 'No encuentro Chrome o Edge. Instalá uno o configurá COMPARASUPLE_BROWSER.')
+                               else 'No encuentro Chrome o Edge. Instalá uno o configurá GRUPO12_BROWSER.')
         self.diagnostic['environment'].update(browser=str(browser), browser_version=browser_version(browser))
         self.save_diagnostic('preparando_tagui')
         prepare_runtime(self.work, self.human)
@@ -330,7 +330,7 @@ class Engine:
     def _attach_existing(self):
         self.save_diagnostic('esperando_depuracion')
         self.browser_ws = ensure_existing_chrome()
-        self.ws = 'comparasuple:page'
+        self.ws = 'grupo12:page'
         self.save_diagnostic('esperando_permiso')
         print('Paso 2/2: en Chrome, aceptá «Permitir / Allow» para conectar el programa.\n'
               'Habilitar la casilla y aceptar este aviso son dos pasos distintos. '
@@ -353,7 +353,7 @@ class Engine:
             {'url': 'about:blank', 'newWindow': True})['targetId']
         session = self.browser_command('Target.attachToTarget',
             {'targetId': self.attached_target, 'flatten': True})['sessionId']
-        self.browser_command('ComparaSuple.setSession', {'sessionId': session})
+        self.browser_command('Grupo12.setSession', {'sessionId': session})
         self._prepare_window(self.attached_target)
 
     def _open_external_bridge(self):
@@ -400,7 +400,7 @@ class Engine:
                 raise BrowserDisconnected('La pestaña del comparador ya no está disponible.')
             session = self.browser_command('Target.attachToTarget',
                 {'targetId': self.attached_target, 'flatten': True})['sessionId']
-            self.browser_command('ComparaSuple.setSession', {'sessionId': session})
+            self.browser_command('Grupo12.setSession', {'sessionId': session})
             return True
         except Exception as error:
             self.save_error_logs(error)
@@ -415,7 +415,7 @@ class Engine:
         window = self.browser_command('Browser.getWindowForTarget', {'targetId': target})
         self.browser_command('Browser.setWindowBounds', {'windowId': window['windowId'], 'bounds': {'windowState': 'maximized'}})
         if self.human:
-            marker = 'ComparaSuple ' + uuid.uuid4().hex
+            marker = 'Grupo12 ' + uuid.uuid4().hex
             self.browser_command('Runtime.evaluate', {'expression': 'document.title = ' + json.dumps(marker)}, websocket=self.ws)
             self.browser_hwnd = self._window_handle(marker)
 
@@ -607,11 +607,11 @@ class Engine:
             os.environ,
             tagui_web_browser='headless' if self.headless else 'chrome',
             tagui_data_set='1', tagui_turbo_mode='false', tagui_quiet_mode='true',
-            PYTHONUTF8='1', COMPARASUPLE_BROWSER_PID=str(self.browser_pid),
-            COMPARASUPLE_ACTIVATE_BROWSER='0' if inspecting or self.human_started else '1',
+            PYTHONUTF8='1', GRUPO12_BROWSER_PID=str(self.browser_pid),
+            GRUPO12_ACTIVATE_BROWSER='0' if inspecting or self.human_started else '1',
         )
         if self.browser_hwnd is not None:
-            env['COMPARASUPLE_BROWSER_HWND'] = str(self.browser_hwnd)
+            env['GRUPO12_BROWSER_HWND'] = str(self.browser_hwnd)
         access_env = self.job.get('access_env')
         if access_env and access_env in self.credentials:
             env[access_env] = self.credentials[access_env]
@@ -630,7 +630,7 @@ class Engine:
         local_processes = []
         try:
             if self.attach_existing:
-                self.browser_command('ComparaSuple.startCapture')
+                self.browser_command('Grupo12.startCapture')
             commands = [] if self.attach_existing else [[str(TAGUI / 'php/php.exe'), '-q', 'tagui_chrome.php', self.ws]]
             if self.human and not inspecting:
                 commands.append([sys.executable, '-u', 'tagui_py/tagui_py.py'])
@@ -788,7 +788,7 @@ class Engine:
             except Exception as error:
                 errors.append('Ventana propia: ' + type(error).__name__)
             try:
-                self.browser_command('ComparaSuple.disconnect')
+                self.browser_command('Grupo12.disconnect')
                 self.external_bridge.wait(timeout=5)
             except Exception as error:
                 errors.append('Desconexión: ' + type(error).__name__)
@@ -841,7 +841,7 @@ class Engine:
             self.profile_guard.__exit__(None, None, None)
             self.profile_guard = None
         # Solo se elimina el directorio temporal creado por este motor.
-        if (not keep_chrome and self.work.name.startswith('comparasuple-') and
+        if (not keep_chrome and self.work.name.startswith('grupo12-') and
                 self.work.resolve().parent == Path(tempfile.gettempdir()).resolve()):
             shutil.rmtree(self.work, ignore_errors=True)
         if keep_chrome:
@@ -907,7 +907,7 @@ class Engine:
             with (self.run_dir / 'error.log').open('a', encoding='utf-8') as log:
                 log.write('\n' + self.redact(json.dumps(self.diagnostic, ensure_ascii=False)) + '\n')
                 for name in ('chrome.log', 'chrome-actual.log', 'chrome-actual-status.json', 'tagui.log',
-                             'human_actions.jsonl', 'background_actions.jsonl', 'human_cancelled.txt'):
+                             'human_actions.jsonl', 'human_cancelled.txt'):
                     text = self.log_tail(name)
                     if text:
                         log.write('\n' + name + '\n' + text)

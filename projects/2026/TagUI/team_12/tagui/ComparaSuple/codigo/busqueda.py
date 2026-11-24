@@ -30,14 +30,16 @@ def collect_with_retries(engine, url, destination, attempts=2, **options):
         time.sleep(1)
 
 
-def save_failure(path, provider, url, term, action, error):
-    """La evidencia de una consulta fallida conserva qué se pidió y por qué no se completó."""
-    atomic_json(path, dict(capture_version=1, status='error_consulta', url=url, error=str(error), cards=[],
-                           request=dict(provider=provider['id'], query=term, action=action, expected_url=url)))
-
-
 class ProviderSuspended(Exception):
     """La tienda necesita intervención; las demás pueden seguir trabajando."""
+
+
+def log_progress(navigation, message):
+    prefix = getattr(navigation, 'progress_prefix', '')
+    if prefix:
+        print(f"{prefix} {message}", flush=True)
+    else:
+        print(message, flush=True)
 
 
 class Navigation:
@@ -48,6 +50,7 @@ class Navigation:
         self.provider = None
         self.on_blocked = on_blocked
         self.intervention_timeout = intervention_timeout
+        self.progress_prefix = getattr(engine, 'progress_prefix', '') if engine else ''
 
     def _capture(self, provider, url, destination, term, action, initial, retry=True, expected_page=None, order_by=None):
         options = dict(timeout=150, provider=provider['id'], query=term, action=action, initial=initial)
@@ -55,12 +58,6 @@ class Navigation:
         if order_by is not None:
             page_options['order_by'] = order_by
         options.update(page_options)
-
-        def inspect(path):
-            # Leer la misma pestaña no envía una nueva búsqueda ni pulsa nada.
-            return self.engine.collect(url, path, timeout=45, provider=provider['id'], query=term,
-                                       action='inspect', inspect_action=action, **page_options)
-
         # Repetir un clic de paginación tras un error podría saltar una página.
         retry = retry and expected_page is None
         try:
@@ -70,7 +67,8 @@ class Navigation:
             # El clic pudo completarse antes del corte. Leer primero evita repetirlo.
             used = destination.with_name(destination.stem + '-recuperacion-' + uuid.uuid4().hex[:8] + '.json')
             for attempt in range(3):
-                data = inspect(used)
+                data = self.engine.collect(url, used, timeout=45, provider=provider['id'], query=term,
+                                           action='inspect', inspect_action=action, **page_options)
                 if data['status'] != 'error_extraccion':
                     break
                 if attempt < 2:
@@ -87,22 +85,24 @@ class Navigation:
             if self.on_blocked:
                 self.on_blocked(data, used, request)
             reason = data.get('reason') or 'La tienda requiere intervención'
-            print(f"{provider['name']} | PAUSA: {reason}. Avance guardado.", flush=True)
+            log_progress(self, f"{provider['name']} | PAUSA: {reason}. Avance guardado.")
             if (self.engine.headless or data.get('block_type') not in ('captcha', 'login_requerido')
                     or not wait_for_user(max(0, deadline - time.monotonic()), on_skip=self.engine.resume_human)):
                 raise ProviderSuspended(reason)
 
-            # Leer la misma pestaña no pulsa el desafío.
+            # Leer la misma pestaña no envía una nueva búsqueda ni pulsa el desafío.
             resumed = destination.with_name(destination.stem + '-continuacion-' + uuid.uuid4().hex[:8] + '.json')
             try:
-                data = inspect(resumed)
+                data = self.engine.collect(url, resumed, timeout=45, provider=provider['id'], query=term,
+                                           action='inspect', inspect_action=action, **page_options)
                 used = resumed
                 # Confirmar mientras carga requiere esperar, sin recargar ni hacer clic.
                 for _ in range(3):
                     if data['status'] != 'error_extraccion' or not capture_matches(data, url, provider, expected_page, order_by):
                         break
                     time.sleep(1)
-                    data = inspect(resumed)
+                    data = self.engine.collect(url, resumed, timeout=45, provider=provider['id'], query=term,
+                                               action='inspect', inspect_action=action, **page_options)
                 if data['status'] == 'bloqueado':
                     continue
                 if not allowed_url(provider, data.get('url', '')):
@@ -142,7 +142,7 @@ def check_brand(product, provider, navigation, folder):
     incomplete = False
     key = provider['id'] + '|' + norm(product['brand'])
     stem = provider['id'] + '-marca-' + hashlib.sha256(key.encode()).hexdigest()[:12] + '-' + uuid.uuid4().hex[:8]
-    print(f"{provider['name']} | Comprobando marca {product['brand']}", flush=True)
+    log_progress(navigation, f"{provider['name']} | Comprobando marca {product['brand']}")
     terms = [product['brand'], brand_query(product)]
     if provider['adapter'] == 'mercadolibre':
         terms.reverse()  # La línea evita resultados de otros rubros con la misma palabra.
@@ -162,7 +162,8 @@ def check_brand(product, provider, navigation, folder):
         except (ProviderSuspended, BrowserDisconnected):
             raise
         except Exception as error:
-            save_failure(path, provider, url, term, 'search', error)
+            atomic_json(path, dict(capture_version=1, status='error_consulta', url=url, error=str(error), cards=[],
+                request=dict(provider=provider['id'], query=term, action='search', expected_url=url)))
             refs.append(path.relative_to(folder).as_posix())
             status = 'error_consulta'
             break
@@ -173,46 +174,27 @@ def check_brand(product, provider, navigation, folder):
 
 def search_product(product, provider, navigation, folder, max_pages):
     full, compact = query(product), compact_query(product)
-    candidates = [compact, full] if provider.get('query_mode') == 'compact' else [full, compact]
-    if provider['adapter'] != 'mercadolibre':
-        # Un buscador que exige todas las palabras no reconoce "(+ Enzyme)" o "2 LBS".
-        # Marca y línea alcanzan: la comparación descarta otras presentaciones y sabores.
-        candidates.append(brand_query(product))
-    terms = []
-    for term in candidates:
-        if norm(term) not in {norm(previous) for previous in terms}:
-            terms.append(term)
-    evidence, incomplete = [], False
-    for index, term in enumerate(terms):
-        if index:
-            print(f"{provider['name']} | {product['id']} | Probar consulta equivalente: {term}", flush=True)
-        result, detail_attempted = _search_query(product, provider, navigation, folder, max_pages, term)
-        evidence += result['evidence']
-        result['evidence'] = list(evidence)
-        if detail_attempted or result['status'] not in ('no_encontrado', 'busqueda_incompleta'):
-            break
-        # Si una consulta amplia agota páginas, sólo la completa todavía puede encontrarlo.
-        if result['status'] == 'busqueda_incompleta':
-            if terms[index + 1:index + 2] != [full]:
-                break
-            incomplete = True
-    if incomplete and result['status'] == 'no_encontrado':
-        result.update(status='busqueda_incompleta', reason='Consulta incompleta; revisar evidencia')
-    return result
+    term, alternative = (compact, full) if provider.get('query_mode') == 'compact' else (full, compact)
+    result, detail_attempted = _search_query(product, provider, navigation, folder, max_pages, term)
+    # La consulta más amplia puede agotar páginas; la completa aún puede encontrarlo.
+    incomplete = result['status'] == 'busqueda_incompleta' and term == compact
+    if (detail_attempted or norm(alternative) == norm(term) or
+            result['status'] != 'no_encontrado' and not incomplete):
+        return result
+    log_progress(navigation, f"{provider['name']} | {product['id']} | Probar consulta equivalente: {alternative}")
+    retried, _ = _search_query(product, provider, navigation, folder, max_pages, alternative)
+    retried['evidence'] = result['evidence'] + retried['evidence']
+    if incomplete and retried['status'] == 'no_encontrado':
+        retried.update(status='busqueda_incompleta', reason='Consulta incompleta; revisar evidencia')
+    return retried
 
 
 def _search_query(product, provider, navigation, folder, max_pages, term):
     marketplace = provider['adapter'] == 'mercadolibre'
-    print(f"{provider['name']} | {product['id']} | Buscar: {term}", flush=True)
+    log_progress(navigation, f"{provider['name']} | {product['id']} | Buscar: {term}")
 
     stem = f"{provider['id']}-{product['id']}-{uuid.uuid4().hex[:8]}"
     url = search_url(provider, term)
-
-    def listing_options(page):
-        options = {} if page is None else dict(expected_page=page)
-        if marketplace:
-            options['order_by'] = 'price_asc'  # MercadoLibre ordena cada listado por menor precio.
-        return options
 
     cards, refs, seen = [], [], set()
     history, origins = [], {}
@@ -231,12 +213,16 @@ def _search_query(product, provider, navigation, folder, max_pages, term):
 
         path = folder / 'evidencia' / f'{stem}-{page + 1}.json'
         try:
-            data, used = navigation.collect(provider, url, path, term, action, **listing_options(expected_page))
+            options = {} if expected_page is None else dict(expected_page=expected_page)
+            if marketplace:
+                options['order_by'] = 'price_asc'
+            data, used = navigation.collect(provider, url, path, term, action, **options)
             refs.append(used.relative_to(folder).as_posix())
         except (ProviderSuspended, BrowserDisconnected):
             raise
         except Exception as error:
-            save_failure(path, provider, url, term, action, error)
+            atomic_json(path, dict(capture_version=1, status='error_consulta', url=url, error=str(error), cards=[],
+                request=dict(provider=provider['id'], query=term, action=action, expected_url=url)))
             refs.append(path.relative_to(folder).as_posix())
             status = 'error_consulta'
             break
@@ -285,7 +271,7 @@ def _search_query(product, provider, navigation, folder, max_pages, term):
     detail_attempted = bool(result.get('url')) and (status == 'ok' or limited)
     # Una ficha verificada sirve para comparar, aunque no se recorra todo el sitio.
     for attempt, candidate in enumerate(candidates if detail_attempted else []):
-        print(f"{provider['name']} | {product['id']} | Verificando ficha: {candidate.get('title', '')}", flush=True)
+        log_progress(navigation, f"{provider['name']} | {product['id']} | Verificando ficha: {candidate.get('title', '')}")
         path = folder / 'evidencia' / f'{stem}-ficha-{attempt + 1}.json'
         try:
             origin = origins[candidate['url']]
@@ -293,12 +279,15 @@ def _search_query(product, provider, navigation, folder, max_pages, term):
                 for index, (source_url, source_action, source_page) in enumerate(history[:origin + 1], 1):
                     back = folder / 'evidencia' / f'{stem}-regreso-{attempt}-{index}.json'
                     try:
-                        data, used = navigation.collect(provider, source_url, back, term, source_action,
-                                                        **listing_options(source_page))
+                        options = {} if source_page is None else dict(expected_page=source_page)
+                        if marketplace:
+                            options['order_by'] = 'price_asc'
+                        data, used = navigation.collect(provider, source_url, back, term, source_action, **options)
                     except (ProviderSuspended, BrowserDisconnected):
                         raise
                     except Exception as error:
-                        save_failure(back, provider, source_url, term, source_action, error)
+                        atomic_json(back, dict(capture_version=1, status='error_consulta', url=source_url, error=str(error), cards=[],
+                            request=dict(provider=provider['id'], query=term, action=source_action, expected_url=source_url)))
                         refs.append(back.relative_to(folder).as_posix())
                         raise
                     refs.append(used.relative_to(folder).as_posix())
@@ -320,7 +309,8 @@ def _search_query(product, provider, navigation, folder, max_pages, term):
         except (ProviderSuspended, BrowserDisconnected):
             raise
         except Exception as error:
-            save_failure(path, provider, candidate['url'], '', 'detail', error)
+            atomic_json(path, dict(capture_version=1, status='error_consulta', url=candidate['url'], error=str(error), cards=[],
+                request=dict(provider=provider['id'], query='', action='detail', expected_url=candidate['url'])))
             result.update(status='error_consulta', url=candidate['url'], price=None, reason='No se pudo confirmar la ficha')
         refs.append(path.relative_to(folder).as_posix())
         if result['status'] == 'ok' or not marketplace or result['status'].startswith('error'):

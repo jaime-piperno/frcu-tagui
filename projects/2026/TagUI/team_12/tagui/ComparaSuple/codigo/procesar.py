@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 
-from matching import select, query, compact_query, brand_query, candidates_by_price, money, validate_offer
+from matching import select, query, compact_query, candidates_by_price, money, validate_offer
 from capturas import METADATA_FIELDS, evidence_path, normalize_capture, validate_intervention
 from proveedores import same_url, capture_matches
 
@@ -158,7 +158,7 @@ def _result(product, provider, record, artifacts, settings):
             return dict(row, status='error_url', reason='Falta la evidencia de la publicación elegida')
     selected = details or artifacts
     queries = {record.get('query')}
-    equivalents = {query(product), compact_query(product), brand_query(product)}
+    equivalents = {query(product), compact_query(product)}
     if record.get('query') in equivalents:
         queries.update(equivalents)  # Conserva los intentos equivalentes en cualquiera de los órdenes.
     cards, status = [], 'ok'
@@ -251,5 +251,5 @@ def process_run(folder, write_outputs=True):
             payload['results'].append(_result(product, provider, record, artifacts, providers[provider]))
     if write_outputs:
         from workbook_portable import export_workbook
-        export_workbook(payload, folder / 'Comparación de precios.xlsx')
+        export_workbook(payload, folder / 'Comparador Grupo12.xlsx')
     return payload

@@ -48,8 +48,8 @@ def read_catalog(path):
             raise ValueError(f'Fila {number}: MARCA es obligatoria para verificar cada tienda.')
         product = dict(id=str(value(row, 'id') or '').strip() or f'P{number:04d}', name=name,
                        brand=brand, category=str(value(row, 'categoria') or ''),
-                       cost=money(value(row, 'costo')),
-                       sale_price=money(value(row, 'precio de venta', 'precio de venta recomendado', 'precio')),
+                       cost=money(value(row, 'costo', 'costo grupo12')),
+                       grupo12_price=money(value(row, 'precio de venta', 'precio grupo12', 'precio de venta recomendado', 'precio')),
                        weight_g=money(value(row, 'peso g')), pack=money(value(row, 'unidades por pack')),
                        source_row=number)
         for field, column in [('sku', 'sku'), ('line', 'linea'), ('flavor', 'sabor'), ('presentation', 'presentacion')]:
@@ -98,24 +98,19 @@ def save_blocked(payload, folder, provider, product, data, path, request):
     save_provider(payload, folder, provider['id'])
 
 
-def mark_pending(payload, folder, provider, products, status, reason, keep_blocked=False):
-    """Registra por qué quedó pendiente cada producto, sin borrar capturas terminadas."""
+def save_provider_error(payload, folder, provider, products, error):
+    """Un fallo de una tienda no borra precios confirmados ni detiene las otras."""
     existing = {r['product_id']: r for r in payload['results'] if r['provider'] == provider['id']}
     for product in products:
         old = existing.get(product['id'])
-        if not needs_capture(old) or (keep_blocked and old and old['status'] == 'bloqueado'):
+        if not needs_capture(old) or (old and old['status'] == 'bloqueado'):
             continue
         if old:
             payload['results'].remove(old)
-        payload['results'].append(dict(product_id=product['id'], provider=provider['id'], status=status,
-                                       price=None, evidence=[], checked_at=now(), reason=reason))
+        payload['results'].append(dict(product_id=product['id'], provider=provider['id'],
+            status='error_consulta', price=None, evidence=[], checked_at=now(),
+            reason=f'No se completó la tienda: {type(error).__name__}: {error}'))
     save_provider(payload, folder, provider['id'])
-
-
-def save_provider_error(payload, folder, provider, products, error):
-    """Un fallo de una tienda no borra precios confirmados ni detiene las otras."""
-    mark_pending(payload, folder, provider, products, 'error_consulta',
-                 f'No se completó la tienda: {type(error).__name__}: {error}', keep_blocked=True)
 
 
 @contextmanager
@@ -134,7 +129,7 @@ def current_chrome(folder, connection=None):
 
 
 def menu(connected=False):
-    print('\nComparaSuple - Comparador de suplementos\n')
+    print('\nGRUPO12 - Comparador de suplementos\n')
     if connected:
         print('Chrome habitual conectado. Se desconecta al salir.\n')
     print('1. Demo visible: un producto en las tiendas configuradas')
@@ -159,15 +154,15 @@ def menu(connected=False):
 
 def main():
     try:
-        # Sólo comprueba la instalación: el Excel se genera al final y debe fallar antes de abrir Chrome.
-        from openpyxl.workbook.properties import CalcProperties  # noqa: F401
+        import openpyxl
+        from openpyxl.workbook.properties import CalcProperties
     except ImportError as error:
         raise RuntimeError('Falta instalar o actualizar openpyxl en el Python que ejecuta el programa. Ejecutá:\n'
                            f'"{sys.executable}" -m pip install -r "{ROOT / "requirements.txt"}"') from error
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--menu', action='store_true', help='Abrir el menú')
-    parser.add_argument('--demo', action='store_true', help='Producto N001 en las tiendas configuradas')
-    parser.add_argument('--excel', type=Path, default=ROOT / 'entrada/Productos.xlsx')
+    parser.add_argument('--demo', action='store_true', help='Producto N011 en las tiendas configuradas')
+    parser.add_argument('--excel', type=Path, default=ROOT / 'entrada/Productos Grupo12.xlsx')
     parser.add_argument('--producto', action='append', default=[], help='ID a consultar; se puede repetir')
     parser.add_argument('--proveedor', action='append', default=[], help='Tienda a consultar; se puede repetir')
     modes = parser.add_mutually_exclusive_group()
@@ -181,6 +176,7 @@ def main():
     parser.add_argument('--espera-intervencion', type=int, default=300,
                         help='Segundos para resolver CAPTCHA/login visible; 0 guarda y omite la tienda')
     parser.add_argument('--procesar', type=Path, help='Generar Excel sin consultar las tiendas')
+    parser.add_argument('--sin-notificar', action='store_true', help='Omitir el envío de alertas a Telegram')
     args = parser.parse_args()
 
     if not args.menu:
@@ -220,8 +216,14 @@ def run(args, parser, connection=None):
 
     from procesar import process_run
     if args.procesar:
-        process_run(args.procesar)
-        print('RESULTADO: ' + str(args.procesar.resolve() / 'Comparación de precios.xlsx'))
+        payload = process_run(args.procesar)
+        print('RESULTADO: ' + str(args.procesar.resolve() / 'Comparador Grupo12.xlsx'))
+        if not getattr(args, 'sin_notificar', False):
+            try:
+                from notificaciones import notificar_mejores_ofertas
+                notificar_mejores_ofertas(payload, args.procesar)
+            except Exception as notify_err:
+                print(f'[ALERTA NOTIFICACIONES] No se pudo enviar el reporte: {notify_err}', flush=True)
         return
     if os.name != 'nt':
         parser.error('La navegación de esta versión requiere Windows. --procesar sí funciona en Linux.')
@@ -235,7 +237,7 @@ def run(args, parser, connection=None):
     if type(config.get('max_pages')) is not int or config['max_pages'] < 1:
         raise ValueError('max_pages debe ser un entero positivo.')
     products = read_catalog(args.excel)
-    wanted = ['N001'] if args.demo else args.producto
+    wanted = ['N011'] if args.demo else args.producto
     if set(wanted) - {p['id'] for p in products}:
         parser.error('Hay IDs de producto desconocidos.')
     if wanted:
@@ -311,6 +313,9 @@ def run(args, parser, connection=None):
             engine.credentials = dict(secrets)
         if human and pending_providers:
             print('Modo visible: dejar libres mouse y teclado. Escape o cambiar de ventana detiene el robot.', flush=True)
+        total_tasks = len(active_providers) * len(ordered)
+        completed_tasks = sum(1 for p in active_providers for prod in ordered
+                              if not needs_capture(existing.get((p['id'], prod['id']))))
         for provider in pending_providers:
             active_product = None
             try:
@@ -327,8 +332,19 @@ def run(args, parser, connection=None):
                             raise BrowserDisconnected('Se recuperó la conexión, pero falta confirmar la sesión en la página actual.')
                     if not session_ready:
                         # Sin sesión no se consultan productos ni se borran capturas terminadas.
-                        mark_pending(payload, folder, provider, ordered, 'omitido_sin_sesion',
-                                     'MercadoLibre omitido: no se confirmó una sesión iniciada.')
+                        for product in ordered:
+                            old = existing.get((provider['id'], product['id']))
+                            if not needs_capture(old):
+                                continue
+                            if old:
+                                payload['results'].remove(old)
+                            payload['results'].append(dict(product_id=product['id'], provider=provider['id'],
+                                status='omitido_sin_sesion', price=None, evidence=[], checked_at=now(),
+                                reason='MercadoLibre omitido: no se confirmó una sesión iniciada.'))
+                            completed_tasks += 1
+                            pct = (completed_tasks / total_tasks * 100) if total_tasks else 100.0
+                            print(f"[{completed_tasks}/{total_tasks} ({pct:.1f}%)] {provider['name']} | {product['name']} | omitido_sin_sesion | None", flush=True)
+                        save_provider(payload, folder, provider['id'])
                         print('MercadoLibre omitido: sin sesión confirmada.', flush=True)
                         continue
                     navigation.current_provider = provider['id']  # La comprobación ya abrió la tienda.
@@ -337,6 +353,9 @@ def run(args, parser, connection=None):
                     if not needs_capture(old):
                         continue
                     active_product = product
+                    current_idx = completed_tasks + 1
+                    pct = (current_idx / total_tasks * 100) if total_tasks else 100.0
+                    navigation.progress_prefix = f"[{current_idx}/{total_tasks} ({pct:.1f}%)]"
                     navigation.on_blocked = lambda data, path, request: save_blocked(
                         payload, folder, provider, product, data, path, request)
                     key = provider['id'] + '|' + norm(product['brand'])
@@ -351,14 +370,18 @@ def run(args, parser, connection=None):
                             result = dict(product_id=product['id'], provider=provider['id'], status=check['status'],
                                 price=None, evidence=check['evidence'], checked_at=check['checked_at'])
                     except ProviderSuspended as error:
-                        print(f"{provider['name']} suspendido: {error}. Reanudar con --reanudar y --visible.", flush=True)
+                        prefix = getattr(navigation, 'progress_prefix', '')
+                        prefix = f"{prefix} " if prefix else ""
+                        print(f"{prefix}{provider['name']} suspendido: {error}. Reanudar con --reanudar y --visible.", flush=True)
                         break
                     # Reemplaza el checkpoint que pudo guardarse durante la pausa.
                     payload['results'] = [r for r in payload['results'] if
                         (r['product_id'], r['provider']) != (product['id'], provider['id'])]
                     payload['results'].append(result)
                     save_provider(payload, folder, provider['id'])
-                    print(f"{provider['name']} | {product['name']} | {result['status']} | {result.get('price')}", flush=True)
+                    completed_tasks += 1
+                    pct_done = (completed_tasks / total_tasks * 100) if total_tasks else 100.0
+                    print(f"[{completed_tasks}/{total_tasks} ({pct_done:.1f}%)] {provider['name']} | {product['name']} | {result['status']} | {result.get('price')}", flush=True)
                     active_product = None
             except BrowserDisconnected as error:
                 engine.save_error_logs(error)
@@ -369,9 +392,19 @@ def run(args, parser, connection=None):
             except Exception as error:
                 print(f"{provider['name']} | Error: {error}. Se continúa con las demás tiendas.", flush=True)
                 save_provider_error(payload, folder, provider, ordered, error)
+                for prod in ordered:
+                    old = existing.get((provider['id'], prod['id']))
+                    if needs_capture(old):
+                        completed_tasks += 1
         if not args.solo_capturar:
             payload = process_run(folder)
-            print('RESULTADO: ' + str(folder / 'Comparación de precios.xlsx'))
+            print('RESULTADO: ' + str(folder / 'Comparador Grupo12.xlsx'))
+            if not getattr(args, 'sin_notificar', False):
+                try:
+                    from notificaciones import notificar_mejores_ofertas
+                    notificar_mejores_ofertas(payload, folder)
+                except Exception as notify_err:
+                    print(f'[ALERTA NOTIFICACIONES] No se pudo enviar el reporte: {notify_err}', flush=True)
         print('Estados: ' + str(dict(Counter(row['status'] for row in payload['results']))))
         if engine is not None:
             finished = {(r['provider'], r['product_id']): r for r in payload['results']}

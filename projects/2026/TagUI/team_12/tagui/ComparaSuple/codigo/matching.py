@@ -40,9 +40,9 @@ def brand_matches(brand, title):
     wanted, words = norm(brand).split(), norm(title).split()
     if not wanted:
         return False
-    # Gold también puede ser una línea de otra marca (Nitro Tech Whey Gold es de MuscleTech).
+    # Gold también puede ser una línea de otra marca.
     if ''.join(wanted) in ('gold', 'goldnutrition') and re.search(
-            r'\b(?:optimum|gold\s*standard|body\s*advance|htn|hard\s*core|muscletech|nitro\s*tech)\b', ' '.join(words)):
+            r'\b(?:optimum|gold\s*standard|body\s*advance|htn|hard\s*core)\b', ' '.join(words)):
         return False
     if wanted == ['gold'] and 'goldnutrition' in words:
         return True
@@ -330,10 +330,7 @@ def select(product, cards, page_status='ok'):
         status = 'sin_precio'
     else:
         status = page_status if page_status != 'ok' else 'no_encontrado'
-    reason = {'revisar': 'Falta confirmar presentación o disponibilidad',
-              'no_encontrado': 'Ninguna publicación coincide con la presentación pedida',
-              'sin_stock': 'La presentación pedida figura sin stock',
-              'sin_precio': 'La presentación pedida no muestra un precio'}.get(status, status)
+    reason = 'Falta confirmar presentación o disponibilidad' if status == 'revisar' else status
     if status == 'revisar' and (exact or review):
         # El precio publicado solo ordena qué ficha revisar; no confirma su precio final.
         def priority(candidate):

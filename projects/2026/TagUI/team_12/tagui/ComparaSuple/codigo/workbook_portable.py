@@ -2,7 +2,6 @@
 from datetime import datetime, timezone
 from math import ceil
 from pathlib import Path, PurePosixPath
-import re
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlsplit
 
@@ -190,13 +189,11 @@ def export_workbook(data, target):
                 price = offer.get('price') if offer['status'] == 'ok' else None
                 offers[provider['id']] = offer
                 refs = offer.get('evidence') or []
-                # La última ficha abierta es la que confirmó o descartó el precio.
-                fichas = [ref for ref in refs if re.search(r'-ficha-\d+\.json$', ref)]
-                evidence = _relative_path((fichas or refs or [''])[-1])
+                evidence = _relative_path(next((ref for ref in refs if ref.endswith('-ficha.json')), refs[-1] if refs else ''))
                 details.append([product['id'], product['name'], provider['name'], _status(offer),
                                 price, offer.get('method') if price is not None else '', offer.get('title'), offer.get('variant_id'),
                                 offer.get('url'), offer.get('checked_at'), offer.get('reason'), evidence])
-            values = [product['name'], product.get('cost'), product.get('sale_price'), None, None]
+            values = [product['name'], product.get('cost'), product.get('grupo12_price'), None, None]
             values += [offers[p['id']].get('price') if offers[p['id']]['status'] == 'ok' else
                        _status(offers[p['id']]) for p in providers]
             for col, value in enumerate(values, 1):
