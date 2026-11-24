@@ -270,8 +270,7 @@ echo [INFO] Actualizando reporte_supermercados.xlsx con la nueva consulta...
 call node generar_excel.js
 
 if exist "reporte_supermercados.xlsx" (
-    echo [INFO] Abriendo reporte_supermercados.xlsx...
-    start "" "reporte_supermercados.xlsx"
+    echo [OK] Reporte actualizado. Usa la opcion [3] para abrirlo cuando lo necesites.
 )
 
 echo.
@@ -321,8 +320,7 @@ echo [INFO] Procesando datos y generando reporte Excel con 5 hojas...
 call node generar_excel.js
 
 if exist "reporte_supermercados.xlsx" (
-    echo [INFO] Abriendo reporte_supermercados.xlsx...
-    start "" "reporte_supermercados.xlsx"
+    echo [OK] Reporte actualizado. Usa la opcion [3] para abrirlo cuando lo necesites.
 )
 
 echo.

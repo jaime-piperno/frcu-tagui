@@ -69,7 +69,10 @@ async function main() {
     });
 
     var itemsMensual = items.filter(function (x) { return x.modo === 'compra_mes'; });
-    var itemsIndividual = items.filter(function (x) { return x.modo === 'individual'; });
+    var itemsIndividualHistoricos = items.filter(function (x) { return x.modo === 'individual'; });
+    var ultimaEjecucion = items[items.length - 1];
+    var ultimaEjecucionIndividual = ultimaEjecucion && ultimaEjecucion.modo === 'individual';
+    var itemsIndividual = ultimaEjecucionIndividual ? itemsIndividualHistoricos : [];
 
     // Si no hay diferenciación de modo, tratamos todos como compra mensual
     if (itemsMensual.length === 0 && itemsIndividual.length === 0) {
@@ -118,18 +121,24 @@ async function main() {
         var preciosPorSuper = {};
         var itemsPorSuper = {};
         var validosProd = [];
+        var cantidadPreciosObservados = 0;
 
         supersList.forEach(function (s) {
             var found = itemsDelProd.filter(function (x) { return x.supermercado === s; }).pop();
             itemsPorSuper[s] = found || null;
-            if (found && found.valido && found.precio !== null && found.precio > 0) {
-                var precioItem = found.precio;
-                preciosPorSuper[s] = precioItem;
-                totalesCanasta[s] += precioItem;
+            var tienePrecioObservado = found && Number.isFinite(found.precio) && found.precio > 0;
+            if (tienePrecioObservado) {
+                preciosPorSuper[s] = found.precio;
+                cantidadPreciosObservados++;
+                // Los totales reflejan todos los precios extraídos, incluso si el título no pasó la validación.
+                totalesCanasta[s] += found.precio;
                 conteoEncontrados[s]++;
-                validosProd.push({ superm: s, precio: precioItem, item: found });
             } else {
                 preciosPorSuper[s] = null;
+            }
+            if (tienePrecioObservado && found.valido) {
+                var precioItem = found.precio;
+                validosProd.push({ superm: s, precio: precioItem, item: found });
             }
         });
 
@@ -152,6 +161,7 @@ async function main() {
             coto: itemsPorSuper['COTO'],
             dia: itemsPorSuper['Día %'],
             cantidadTotalValidos: validosProd.length,
+            cantidadPreciosObservados: cantidadPreciosObservados,
             ganador: ganadorProd,
             masCaro: masCaroProd,
             ahorro: ahorroProd
@@ -247,7 +257,8 @@ async function main() {
 
         mapeoSuper.forEach(function (m) {
             var cCell = ws1.getCell(m.col + rWs1);
-            if (!m.obj || !m.obj.valido || m.obj.precio === null || m.obj.precio <= 0) {
+            var tienePrecioObservado = m.obj && Number.isFinite(m.obj.precio) && m.obj.precio > 0;
+            if (!tienePrecioObservado) {
                 var etiqueta = m.obj ? (m.obj.estado === 'SIN STOCK' ? '⚠️ Sin Stock' : '❌ No Encontrado') : '❌ No Encontrado';
                 cCell.value = etiqueta;
                 cCell.font = { size: 8.5, color: { argb: COLOR_ROJO_TEXTO }, italic: true };
@@ -258,9 +269,12 @@ async function main() {
                 cCell.numFmt = '"$"#,##0.00';
                 cCell.alignment = { vertical: 'middle', horizontal: 'right' };
                 var esGanadorDeProd = f.ganador && f.ganador.superm === m.superm;
-                if (esGanadorDeProd) {
+                if (esGanadorDeProd && m.obj.valido) {
                     cCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_VERDE_PASTEL } };
                     cCell.font = { bold: true, color: { argb: COLOR_VERDE_TEXTO }, size: 9.5 };
+                } else if (!m.obj.valido) {
+                    cCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_AMARILLO_PASTEL } };
+                    cCell.font = { color: { argb: COLOR_AMARILLO_TEXTO }, italic: true, size: 9.5 };
                 } else {
                     cCell.font = { size: 9.5 };
                 }
@@ -274,7 +288,14 @@ async function main() {
             stProdCell.font = { bold: true, color: { argb: COLOR_VERDE_TEXTO }, size: 9 };
             stProdCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_VERDE_PASTEL } };
         } else if (f.cantidadTotalValidos > 0) {
-            stProdCell.value = '⚠️ Encontrado en ' + f.cantidadTotalValidos + ' de 3';
+            var observadosNoValidados = f.cantidadPreciosObservados - f.cantidadTotalValidos;
+            stProdCell.value = observadosNoValidados > 0
+                ? '⚠️ ' + f.cantidadTotalValidos + ' validados · ' + observadosNoValidados + ' observados'
+                : '⚠️ Encontrado en ' + f.cantidadTotalValidos + ' de 3';
+            stProdCell.font = { bold: true, color: { argb: COLOR_AMARILLO_TEXTO }, size: 9 };
+            stProdCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_AMARILLO_PASTEL } };
+        } else if (f.cantidadPreciosObservados > 0) {
+            stProdCell.value = '⚠️ ' + f.cantidadPreciosObservados + ' precio(s) observado(s) sin validar';
             stProdCell.font = { bold: true, color: { argb: COLOR_AMARILLO_TEXTO }, size: 9 };
             stProdCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_AMARILLO_PASTEL } };
         } else {
@@ -315,7 +336,7 @@ async function main() {
 
     // Fila Total al pie de la tabla
     ws1.getRow(rWs1).height = 26;
-    ws1.getCell('B' + rWs1).value = 'TOTAL GASTADO EN PRODUCTOS ENCONTRADOS';
+    ws1.getCell('B' + rWs1).value = 'TOTAL DE PRECIOS OBSERVADOS';
     ws1.getCell('B' + rWs1).font = { bold: true, size: 9.5 };
     ws1.getCell('B' + rWs1).alignment = { vertical: 'middle', horizontal: 'left' };
 
@@ -506,7 +527,9 @@ async function main() {
     if (itemsIndividual.length === 0) {
         ws2.mergeCells('B4:G4');
         var vacioCell = ws2.getCell('B4');
-        vacioCell.value = 'No se registraron consultas individuales aún. Realizá una búsqueda rápida desde el panel web para ver la comparativa aquí.';
+        vacioCell.value = ultimaEjecucionIndividual
+            ? 'No se registraron consultas individuales aún. Realizá una búsqueda rápida desde el panel web para ver la comparativa aquí.'
+            : 'La última ejecución fue una canasta. No hay una búsqueda individual nueva para mostrar en esta hoja.';
         vacioCell.font = { italic: true, color: { argb: 'FF777777' }, size: 10 };
         vacioCell.alignment = { vertical: 'middle', horizontal: 'center' };
         ws2.getRow(4).height = 30;

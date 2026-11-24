@@ -1,7 +1,7 @@
 # Documentación de Cambios — Etapa 2 (Grupo 9)
 
 **Equipo:** María Slootmans Corrá, Franco Valli, Victoria Nuñez Baccon.
-**Proyecto base:** [`team_1`](../../team_1) — Comparador RPA de Precios (Grupo 1, Etapa 1).
+**Proyecto base:** Comparador RPA de Precios (Grupo 1, Etapa 1), este mismo proyecto.
 **Alcance de esta etapa:** agregar monitoreo continuo con persistencia histórica y alertas automáticas por Telegram, sin modificar el motor de scraping original.
 
 Este documento complementa al [`README.md`](../README.md) y describe, archivo por archivo, qué se agregó o modificó respecto del proyecto recibido y por qué.

@@ -538,13 +538,24 @@ async function searchCarrefour(page, prodClean, options = {}) {
         unidad: itemCat ? itemCat.unidad : (unidad || null),
         palabrasMarca: (itemCat ? validador.normalizar(itemCat.marca) : (baseConfig.marca ? validador.normalizar(baseConfig.marca) : '')).split(/\s+/).filter(w => w.length >= 2 && !['la', 'el', 'los', 'las', 'de', 'del'].includes(w)),
         marcasCompetidoras: Array.from(validador.MARCAS_CONOCIDAS || []),
-        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : []
+        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : [],
+        referenciasImagen: itemCat ? validador.obtenerReferenciasImagen(itemCat.id, 'Carrefour') : [],
+        nombreCatalogo: itemCat ? (itemCat.nombre_completo || '') : ''
     };
 
     const cData = await page.evaluate((config) => {
         function cleanText(s) {
             if (!s) return '';
             return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/(\d+)\s*%/g, '$1%').replace(/[.,;:!¡?¿()[\]"'\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        function canonicalImageUrl(raw) {
+            if (!raw) return '';
+            try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); }
+            catch (e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); }
+        }
+        function imageUrlText(raw) {
+            try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; }
+            catch (e) { return ''; }
         }
         function contienePalabra(texto, palabra) {
             if (!texto || !palabra) return false;
@@ -564,9 +575,14 @@ async function searchCarrefour(page, prodClean, options = {}) {
             var nEl = c.querySelector('h3, h2, [class*="productBrand"], [class*="nameContainer"], [data-testid="product-summary-name"], [class*="productName"]');
             var pEl = c.querySelector('[class*="sellingPrice"], [class*="currencyContainer"], [class*="price_sellingPrice"]');
             var lEl = c.querySelector('a[href*="/p"]') || c.querySelector('a');
-            if (!nEl) continue;
+            var imageEl = c.querySelector('img');
+            var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+            var imageAlt = imageEl ? (imageEl.alt || '') : '';
+            var imageTitle = imageEl ? (imageEl.title || '') : '';
+            if (!nEl && !imageAlt && !imageTitle) continue;
 
-            var nameVal = nEl.innerText.trim();
+            var nameVal = nEl ? nEl.innerText.trim() : '';
+            if (!nameVal) nameVal = imageAlt || imageTitle;
             if (!nameVal) continue;
 
             var priceVal = 'N/D';
@@ -581,7 +597,8 @@ async function searchCarrefour(page, prodClean, options = {}) {
             var unavail = (c.querySelector('[class*="unavailable"], [class*="outOfStock"]') !== null) || cardText.indexOf('agotado') > -1 || cardText.indexOf('sin stock') > -1;
             if (priceVal === 'N/D' || priceVal === '' || priceVal === '$0' || priceVal === '$0,00') unavail = true;
 
-            var nClean = cleanText(nameVal);
+            var imageRefMatch = (config.referenciasImagen || []).indexOf(canonicalImageUrl(imageUrl)) >= 0;
+            var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? config.nombreCatalogo : ''].filter(Boolean).join(' '));
 
             // A) Filtro de términos incompatibles (accesorios u otras categorías)
             if (config.terminosIncompatibles && config.terminosIncompatibles.length > 0) {
@@ -789,7 +806,10 @@ async function searchCarrefour(page, prodClean, options = {}) {
                     name: nameVal,
                     price: priceVal,
                     url: urlVal,
-                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE'
+                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+                    imageUrl: canonicalImageUrl(imageUrl),
+                    imageAlt: imageAlt,
+                    imageTitle: imageTitle
                 };
             }
         }
@@ -873,13 +893,24 @@ async function searchCoto(page, prodClean, options = {}) {
         unidad: itemCat ? itemCat.unidad : (unidad || null),
         palabrasMarca: (itemCat ? validador.normalizar(itemCat.marca) : (baseConfig.marca ? validador.normalizar(baseConfig.marca) : '')).split(/\s+/).filter(w => w.length >= 2 && !['la', 'el', 'los', 'las', 'de', 'del'].includes(w)),
         marcasCompetidoras: Array.from(validador.MARCAS_CONOCIDAS || []),
-        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : []
+        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : [],
+        referenciasImagen: itemCat ? validador.obtenerReferenciasImagen(itemCat.id, 'COTO') : [],
+        nombreCatalogo: itemCat ? (itemCat.nombre_completo || '') : ''
     };
 
     const ctData = await page.evaluate((config) => {
         function cleanText(s) {
             if (!s) return '';
             return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/(\d+)\s*%/g, '$1%').replace(/[.,;:!¡?¿()[\]"'\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        function canonicalImageUrl(raw) {
+            if (!raw) return '';
+            try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); }
+            catch (e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); }
+        }
+        function imageUrlText(raw) {
+            try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; }
+            catch (e) { return ''; }
         }
         function contienePalabra(texto, palabra) {
             if (!texto || !palabra) return false;
@@ -901,9 +932,14 @@ async function searchCoto(page, prodClean, options = {}) {
             var nEl = it.querySelector('.nombre-producto, h3, h2, [class*="title"]');
             var pEl = it.querySelector('.card-title, h4, [class*="price"]');
             var lEl = it.querySelector('a');
-            if (!nEl) continue;
+            var imageEl = it.querySelector('img');
+            var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+            var imageAlt = imageEl ? (imageEl.alt || '') : '';
+            var imageTitle = imageEl ? (imageEl.title || '') : '';
+            if (!nEl && !imageAlt && !imageTitle) continue;
 
-            var nameVal = nEl.innerText.trim();
+            var nameVal = nEl ? nEl.innerText.trim() : '';
+            if (!nameVal) nameVal = imageAlt || imageTitle;
             if (!nameVal) continue;
 
             var priceVal = pEl ? pEl.innerText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : 'N/D';
@@ -912,7 +948,8 @@ async function searchCoto(page, prodClean, options = {}) {
             var unavail = itText.indexOf('sin stock') > -1 || itText.indexOf('agotado') > -1 || itText.indexOf('no disponible') > -1;
             if (priceVal === 'N/D' || priceVal === '' || priceVal === '$0' || priceVal === '$0,00') unavail = true;
 
-            var nClean = cleanText(nameVal);
+            var imageRefMatch = (config.referenciasImagen || []).indexOf(canonicalImageUrl(imageUrl)) >= 0;
+            var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? config.nombreCatalogo : ''].filter(Boolean).join(' '));
 
             // A) Filtro de términos incompatibles (accesorios u otras categorías)
             if (config.terminosIncompatibles && config.terminosIncompatibles.length > 0) {
@@ -1117,7 +1154,10 @@ async function searchCoto(page, prodClean, options = {}) {
                     name: nameVal,
                     price: priceVal,
                     url: urlVal,
-                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE'
+                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+                    imageUrl: canonicalImageUrl(imageUrl),
+                    imageAlt: imageAlt,
+                    imageTitle: imageTitle
                 };
             }
         }
@@ -1209,13 +1249,24 @@ async function searchDia(page, prodClean, options = {}) {
         unidad: itemCat ? itemCat.unidad : (unidad || null),
         palabrasMarca: (itemCat ? validador.normalizar(itemCat.marca) : (baseConfig.marca ? validador.normalizar(baseConfig.marca) : '')).split(/\s+/).filter(w => w.length >= 2 && !['la', 'el', 'los', 'las', 'de', 'del'].includes(w)),
         marcasCompetidoras: Array.from(validador.MARCAS_CONOCIDAS || []),
-        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : []
+        nombresSupermercados: (itemCat && itemCat.nombres_supermercados) ? itemCat.nombres_supermercados.map(n => validador.normalizar(n)) : [],
+        referenciasImagen: itemCat ? validador.obtenerReferenciasImagen(itemCat.id, 'Día %') : [],
+        nombreCatalogo: itemCat ? (itemCat.nombre_completo || '') : ''
     };
 
     const dData = await page.evaluate((config) => {
         function cleanText(s) {
             if (!s) return '';
             return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/(\d+)\s*%/g, '$1%').replace(/[.,;:!¡?¿()[\]"'\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        function canonicalImageUrl(raw) {
+            if (!raw) return '';
+            try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); }
+            catch (e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); }
+        }
+        function imageUrlText(raw) {
+            try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; }
+            catch (e) { return ''; }
         }
         function contienePalabra(texto, palabra) {
             if (!texto || !palabra) return false;
@@ -1235,9 +1286,14 @@ async function searchDia(page, prodClean, options = {}) {
             var nEl = c.querySelector('h3, h2, [class*="productBrand"], [class*="nameContainer"], [class*="productName"]');
             var pEl = c.querySelector('[class*="sellingPriceValue"], [class*="sellingPrice"], [class*="currencyContainer"], [class*="price"]');
             var lEl = c.querySelector('a[href*="/p"]') || c.querySelector('a');
-            if (!nEl) continue;
+            var imageEl = c.querySelector('img');
+            var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+            var imageAlt = imageEl ? (imageEl.alt || '') : '';
+            var imageTitle = imageEl ? (imageEl.title || '') : '';
+            if (!nEl && !imageAlt && !imageTitle) continue;
 
-            var nameVal = nEl.innerText.trim();
+            var nameVal = nEl ? nEl.innerText.trim() : '';
+            if (!nameVal) nameVal = imageAlt || imageTitle;
             if (!nameVal) continue;
 
             var priceVal = 'N/D';
@@ -1252,7 +1308,8 @@ async function searchDia(page, prodClean, options = {}) {
             var unavail = (c.querySelector('[class*="unavailable"], [class*="outOfStock"]') !== null) || cardText.indexOf('agotado') > -1 || cardText.indexOf('sin stock') > -1;
             if (priceVal === 'N/D' || priceVal === '' || priceVal === '$0' || priceVal === '$0,00') unavail = true;
 
-            var nClean = cleanText(nameVal);
+            var imageRefMatch = (config.referenciasImagen || []).indexOf(canonicalImageUrl(imageUrl)) >= 0;
+            var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? config.nombreCatalogo : ''].filter(Boolean).join(' '));
 
             // A) Filtro de términos incompatibles (accesorios u otras categorías)
             if (config.terminosIncompatibles && config.terminosIncompatibles.length > 0) {
@@ -1457,7 +1514,10 @@ async function searchDia(page, prodClean, options = {}) {
                     name: nameVal,
                     price: priceVal,
                     url: urlVal,
-                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE'
+                    stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+                    imageUrl: canonicalImageUrl(imageUrl),
+                    imageAlt: imageAlt,
+                    imageTitle: imageTitle
                 };
             }
         }
@@ -1648,12 +1708,16 @@ async function runRPA({
                     url: cData ? cData.url : 'https://www.carrefour.com.ar',
                     fecha: fechaHoy,
                     stock_status: cData ? cData.stock : 'NO ENCONTRADO',
+                    imagen_url: cData ? (cData.imageUrl || '') : '',
+                    imagen_alt: cData ? (cData.imageAlt || '') : '',
+                    imagen_title: cData ? (cData.imageTitle || '') : '',
                     cantidad,
                     unidad
                 };
 
                 const rowC = `"${carrefourItem.modo}","${carrefourItem.producto}","${carrefourItem.nombre_encontrado.replace(/"/g, '""')}","${carrefourItem.precio}","${carrefourItem.supermercado}","${carrefourItem.url}","${carrefourItem.fecha}","${carrefourItem.stock_status}","${cantidad}","${unidad}"\n`;
                 fs.appendFileSync(CSV_PATH, rowC, 'utf8');
+                validador.registrarEvidenciaImagen(prodClean, carrefourItem);
                 resultadosSesion.push(carrefourItem);
 
                 if (onStatus) {
@@ -1721,12 +1785,16 @@ async function runRPA({
                     url: ctData ? ctData.url : 'https://www.coto.com.ar',
                     fecha: fechaHoy,
                     stock_status: ctData ? ctData.stock : 'NO ENCONTRADO',
+                    imagen_url: ctData ? (ctData.imageUrl || '') : '',
+                    imagen_alt: ctData ? (ctData.imageAlt || '') : '',
+                    imagen_title: ctData ? (ctData.imageTitle || '') : '',
                     cantidad,
                     unidad
                 };
 
                 const rowCt = `"${cotoItem.modo}","${cotoItem.producto}","${cotoItem.nombre_encontrado.replace(/"/g, '""')}","${cotoItem.precio}","${cotoItem.supermercado}","${cotoItem.url}","${cotoItem.fecha}","${cotoItem.stock_status}","${cantidad}","${unidad}"\n`;
                 fs.appendFileSync(CSV_PATH, rowCt, 'utf8');
+                validador.registrarEvidenciaImagen(prodClean, cotoItem);
                 resultadosSesion.push(cotoItem);
 
                 if (onStatus) {
@@ -1794,12 +1862,16 @@ async function runRPA({
                     url: dData ? dData.url : 'https://diaonline.supermercadosdia.com.ar',
                     fecha: fechaHoy,
                     stock_status: dData ? dData.stock : 'NO ENCONTRADO',
+                    imagen_url: dData ? (dData.imageUrl || '') : '',
+                    imagen_alt: dData ? (dData.imageAlt || '') : '',
+                    imagen_title: dData ? (dData.imageTitle || '') : '',
                     cantidad,
                     unidad
                 };
 
                 const rowD = `"${diaItem.modo}","${diaItem.producto}","${diaItem.nombre_encontrado.replace(/"/g, '""')}","${diaItem.precio}","${diaItem.supermercado}","${diaItem.url}","${diaItem.fecha}","${diaItem.stock_status}","${cantidad}","${unidad}"\n`;
                 fs.appendFileSync(CSV_PATH, rowD, 'utf8');
+                validador.registrarEvidenciaImagen(prodClean, diaItem);
                 resultadosSesion.push(diaItem);
 
                 if (onStatus) {
