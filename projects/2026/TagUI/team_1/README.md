@@ -494,3 +494,40 @@ modo,producto_solicitado,nombre_encontrado,precio,supermercado,url,fecha,stock_s
 
 ## 📄 Ámbito Académico
 Trabajo Práctico desarrollado para la cátedra **Tecnologías para la Automatización (Año 2026)**, carrera de **Ingeniería en Sistemas de Información**, **Universidad Tecnológica Nacional – Facultad Regional Concepción del Uruguay (UTN FRCU)**.
+
+---
+
+## 🔄 Stage 2 – Improvement
+- **Team number:** 9
+- **Members:**
+  - María Slootmans Corrá
+  - Franco Valli
+  - Victoria Nuñez Baccon
+
+### 🚀 Improvement Description
+- **What was improved:**
+  Se agregó monitoreo de precios en el tiempo y alertas proactivas por Telegram, sin modificar el motor de scraping, los selectores de Carrefour/COTO/Día % ni el reporte Excel de la Etapa 1:
+  - **Historial persistente** de precios en JSON Lines (`historial.js`, `historial_precios.jsonl`).
+  - **Motor de alertas** (`detectarAlertas` en `server.js`): baja porcentual (`BAJA`, umbral `UMBRAL_BAJA_PCT`, 10% por defecto) y mínimo histórico.
+  - **Bot de Telegram** (`notificador.js`), sin dependencias nuevas.
+  - **Panel de historial** en el dashboard web (gráfico de tendencia, alertas y resumen de canasta): `public/historial-dashboard.js` y `.css`.
+  - **Validación semántica reforzada** con evidencia de imagen (`validador.js`, `supermercados.tag`).
+- **Why:**
+  En la Etapa 1 cada corrida pisaba `resultados.csv`: no había memoria de precios, no se detectaban bajas respecto del historial propio de cada producto y la única forma de enterarse de un cambio era abrir el dashboard. Detalle archivo por archivo en [`docs/CAMBIOS_ETAPA2.md`](docs/CAMBIOS_ETAPA2.md).
+
+### 🛠️ Updated Usage Instructions
+Los pasos de la Etapa 1 no cambian. Para habilitar las alertas:
+1. Copiar `.env.example` a `.env` y completar:
+   ```env
+   TELEGRAM_BOT_TOKEN=<token del bot, creado con @BotFather>
+   TELEGRAM_CHAT_ID=<chat id propio o de un grupo>
+   UMBRAL_BAJA_PCT=10
+   ```
+2. `npm install` y `node server.js`; al iniciar llega un mensaje de bienvenida por Telegram.
+3. Tras cada búsqueda, una baja real o simulada dispara la alerta y aparece en el panel de historial del dashboard.
+
+Si no se completan las credenciales, `notificador.js` avisa por consola y omite el envío; el resto del sistema funciona igual.
+
+### 📝 Additional Notes
+- Decisión técnica: la mejora se acopla como capa modular al cierre de cada ejecución, preservando intacto el código base.
+- Limitaciones: heredadas de la Etapa 1 (solo Windows por `mouse_helper.exe`; selectores sensibles a cambios de maquetación de los sitios). El historial es un archivo local, sin base de datos.

@@ -132,9 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Añadir mensajes a la consola virtual
     function addLog(msg, isError = false) {
         const p = document.createElement('p');
+        p.className = 'log-msg';
         p.textContent = `> ${msg}`;
         if (isError) p.classList.add('log-error');
         logContainer.appendChild(p);
+        while (logContainer.children.length > 250) logContainer.firstElementChild.remove();
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
@@ -186,6 +188,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             addLog(`Error de conexión: ${error.message}`, true);
         } finally {
+            if (typeof window.refreshHistorialData === 'function') {
+                await Promise.resolve(window.refreshHistorialData(true));
+            } else if (typeof window.refreshResultadosData === 'function') {
+                await Promise.resolve(window.refreshResultadosData());
+            }
             setRunningState(false);
         }
     }
@@ -701,8 +708,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 addLog('✓ RPA detenido por el usuario.');
             } catch (e) {
                 addLog('Error al abortar: ' + e.message, true);
+            } finally {
+                if (typeof window.refreshHistorialData === 'function') {
+                    await Promise.resolve(window.refreshHistorialData(true));
+                } else if (typeof window.refreshResultadosData === 'function') {
+                    await Promise.resolve(window.refreshResultadosData());
+                }
+                setRunningState(false);
             }
-            setRunningState(false);
         });
     }
 

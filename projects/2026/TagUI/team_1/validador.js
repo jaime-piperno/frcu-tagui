@@ -3,7 +3,80 @@
 // validador.js - Motor de Validación Estricta y Detección de Intención
 // ==============================================================================
 
+const fs = require('fs');
+const path = require('path');
 const catalogo = require('./catalogo.js');
+const IMAGE_EVIDENCE_PATH = path.join(__dirname, 'evidencia_imagenes.json');
+
+function normalizarUrlImagen(url) {
+    if (!url || typeof url !== 'string' || /^data:/i.test(url)) return '';
+    try {
+        var parsed = new URL(url);
+        var canonical = (parsed.origin + parsed.pathname).replace(/\/$/, '');
+        if (/placeholder|no[-_]?image|sin[-_]?imagen|default[-_]?image|loading|spinner/i.test(parsed.pathname)) return '';
+        return canonical;
+    } catch (e) {
+        var canonicalFallback = url.split(/[?#]/)[0].replace(/\/$/, '');
+        return /placeholder|no[-_]?image|sin[-_]?imagen|default[-_]?image|loading|spinner/i.test(canonicalFallback) ? '' : canonicalFallback;
+    }
+}
+
+function textoProductoEnUrlImagen(url) {
+    if (!url || typeof url !== 'string') return '';
+    try {
+        var lastSegment = new URL(url).pathname.split('/').pop() || '';
+        var text = decodeURIComponent(lastSegment).replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim();
+        return /[a-z]{3,}/i.test(text) ? text : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function cargarEvidenciaImagenes() {
+    try {
+        if (!fs.existsSync(IMAGE_EVIDENCE_PATH)) return { referencias: {}, resultados: {} };
+        var data = JSON.parse(fs.readFileSync(IMAGE_EVIDENCE_PATH, 'utf8'));
+        return {
+            referencias: data && data.referencias && typeof data.referencias === 'object' ? data.referencias : {},
+            resultados: data && data.resultados && typeof data.resultados === 'object' ? data.resultados : {}
+        };
+    } catch (e) {
+        return { referencias: {}, resultados: {} };
+    }
+}
+
+function guardarEvidenciaImagenes(data) {
+    var tempPath = IMAGE_EVIDENCE_PATH + '.tmp';
+    fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tempPath, IMAGE_EVIDENCE_PATH);
+}
+
+function claveReferenciaImagen(itemId, supermercado) {
+    return normalizar(itemId || '') + '|' + normalizar(supermercado || '');
+}
+
+function claveResultadoImagen(item) {
+    return [item.modo || '', normalizar(item.producto || ''), normalizar(item.supermercado || ''), item.fecha || '', normalizarUrlImagen(item.url || '')].join('|');
+}
+
+function resolverItemCatalogo(query, resultado) {
+    var item = catalogo.buscarEnCatalogo(query);
+    if (!item && resultado && (resultado.cantidad || resultado.unidad)) {
+        item = catalogo.buscarEnCatalogo({ producto: query, cantidad: resultado.cantidad, unidad: resultado.unidad });
+    }
+    return item || null;
+}
+
+function tieneReferenciaDeImagen(itemCatalogo, supermercado, imagenUrl) {
+    if (!itemCatalogo || !itemCatalogo.id || !imagenUrl) return false;
+    var source = normalizarUrlImagen(imagenUrl);
+    if (!source) return false;
+    var evidence = cargarEvidenciaImagenes();
+    var refs = evidence.referencias[claveReferenciaImagen(itemCatalogo.id, supermercado)] || [];
+    return refs.some(function(ref) {
+        return ref && normalizarUrlImagen(ref.url || ref) === source;
+    });
+}
 
 // Normaliza texto: minúsculas, sin diacríticos, espacios limpios
 function normalizar(texto) {
@@ -856,20 +929,52 @@ function obtenerConfiguracionBusqueda(queryOriginal) {
 function validarCoincidencia(queryOriginal, resultado) {
     var intencion = detectarIntencion(queryOriginal);
     var nombreEncontrado = (resultado && (resultado.nombre || resultado.nombre_encontrado)) || '';
+    var imagenUrl = resultado && (resultado.imagenUrl || resultado.imagen_url || resultado.imageUrl || resultado.image_url);
+    var itemConsulta = resolverItemCatalogo(queryOriginal, resultado);
+    var referenciaImagen = tieneReferenciaDeImagen(itemConsulta, resultado && resultado.supermercado, imagenUrl);
+    var textoImagen = resultado ? [resultado.imagenAlt || resultado.imagen_alt || resultado.imageAlt || resultado.image_alt, resultado.imagenTitle || resultado.imagen_title || resultado.imageTitle || resultado.image_title, textoProductoEnUrlImagen(imagenUrl)].filter(Boolean).join(' ') : '';
+    var textoValidacion = [nombreEncontrado, textoImagen].filter(Boolean).join(' ');
+    if (referenciaImagen && itemConsulta) {
+        textoValidacion += ' ' + (itemConsulta.nombre_completo || [itemConsulta.marca, itemConsulta.producto, itemConsulta.variante].filter(Boolean).join(' '));
+    }
+    var resultadoConEvidencia = resultado ? Object.assign({}, resultado) : {};
+    resultadoConEvidencia.textoEvidenciaImagen = textoImagen;
+    resultadoConEvidencia.nombreParaValidar = textoValidacion;
+    resultadoConEvidencia.referenciaImagenValidada = referenciaImagen;
     var matchSub = calcularCoincidenciasSubcadenas(queryOriginal, nombreEncontrado);
 
-    var res = _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEncontrado);
+    var res = _validarCoincidenciaBase(queryOriginal, resultadoConEvidencia, intencion, nombreEncontrado);
     if (res) {
         res.subcadenasCoincidentes = matchSub.coincidentes;
         res.cantidadCoincidencias = matchSub.cantidad;
         res.porcentajeCoincidencia = matchSub.porcentaje;
         res.scoreSubcadenas = matchSub.score;
+        res.evidenciaImagen = Boolean(textoImagen || referenciaImagen);
+        res.identificadoPorImagen = Boolean(referenciaImagen);
     }
     return res;
 }
 
+function regexEscape(texto) {
+    return String(texto).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Los títulos de tienda a veces pluralizan la marca o la variante que el catálogo guarda en singular.
+function contieneTerminoFlexible(texto, termino) {
+    var palabras = normalizar(termino).split(/\s+/).filter(Boolean);
+    if (!palabras.length) return false;
+    var ultima = palabras.length - 1;
+    var patron = palabras.map(function(palabra, indice) {
+        var token = regexEscape(palabra);
+        if (indice === ultima && palabra.length >= 4) token += '(?:es|s)?';
+        return token;
+    }).join('\\s+');
+    return new RegExp('(?:^|\\s)' + patron + '(?:$|\\s)', 'i').test(normalizar(texto));
+}
+
 function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEncontrado) {
-    var nombreNorm = normalizar(nombreEncontrado);
+    var nombreParaValidar = (resultado && resultado.nombreParaValidar) || nombreEncontrado;
+    var nombreNorm = normalizar(nombreParaValidar);
     var precioStr = (resultado && resultado.precioStr) || '';
     var stockRaw = normalizar((resultado && resultado.stockRaw) || '');
 
@@ -923,8 +1028,11 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
     }
 
     // 2.7. VALIDACIÓN DIRECTA MEDIANTE DICCIONARIO DE NOMBRES DE SUPERMERCADOS
-    if (catalogo.buscarPorDiccionarioSupermercado) {
-        var matchDict = catalogo.buscarPorDiccionarioSupermercado(nombreEncontrado);
+    // Una referencia de imagen debe pasar también por las reglas estrictas de marca,
+    // variante y presentación; el texto de catálogo añadido como evidencia no debe
+    // permitir que el atajo del diccionario oculte una contradicción del título.
+    if (catalogo.buscarPorDiccionarioSupermercado && !(resultado && resultado.referenciaImagenValidada)) {
+        var matchDict = catalogo.buscarPorDiccionarioSupermercado(nombreParaValidar);
         if (matchDict && matchDict.item) {
             var itemDict = matchDict.item;
             var targetQueryCat = catalogo.buscarEnCatalogo(queryOriginal);
@@ -978,7 +1086,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
             }
 
             if (esCoherente) {
-                var presEnc = extraerPresentacion(nombreEncontrado);
+                var presEnc = extraerPresentacion(nombreParaValidar);
                 var presEquiv = true;
                 if (presEnc) {
                     var uEnc = presEnc.tipo === 'l' ? 'L' : (presEnc.tipo === 'kg' ? 'kg' : 'un');
@@ -1020,8 +1128,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
             if (m === 'lucchetti' || m === 'luchetti') {
                 return nombreNorm.includes('lucchetti') || nombreNorm.includes('luchetti');
             }
-            var rxM = new RegExp('(?:^|\\s)' + m.replace('-', '[-\\s]') + '(?:$|\\s)', 'i');
-            return rxM.test(nombreNorm);
+            return contieneTerminoFlexible(nombreNorm, m.replace('-', ' '));
         });
 
         if (!tieneMarcaCat) {
@@ -1130,7 +1237,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
 
             if (esBusquedaEstricta) {
                 if (queryMencionaVariante || !esBase) {
-                    var tieneVariante = palabrasVar.every(function(v) { return nombreNorm.includes(v); });
+                    var tieneVariante = palabrasVar.every(function(v) { return contieneTerminoFlexible(nombreNorm, v); });
                     if (!tieneVariante && varCatNorm.includes('lima') && varCatNorm.includes('limon')) {
                         tieneVariante = nombreNorm.includes('lima') || nombreNorm.includes('limon') || nombreNorm.includes('sprite') || nombreNorm.includes('7up');
                     }
@@ -1191,8 +1298,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
                         if ((itemCat.categoria === 'galletitas' || (itemCat._normProducto && itemCat._normProducto.includes('galletita'))) && (sabOtra === 'original' || sabOtra === 'clasica' || sabOtra === 'clasicas' || sabOtra === 'salado')) {
                             continue;
                         }
-                        var rxSabOtra = new RegExp('(?:^|\\s)' + sabOtra + '(?:$|\\s)', 'i');
-                        if (rxSabOtra.test(nombreNorm)) {
+                        if (contieneTerminoFlexible(nombreNorm, sabOtra)) {
                             return {
                                 estado: 'COINCIDENCIA NO VÁLIDA',
                                 valido: false,
@@ -1207,7 +1313,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
         }
 
         // C) Validación estricta de PRESENTACIÓN (cantidad y unidad)
-        var presEncontradaCat = extraerPresentacion(nombreEncontrado);
+        var presEncontradaCat = extraerPresentacion(nombreParaValidar);
         if (presEncontradaCat) {
             var unidEnc = presEncontradaCat.tipo === 'l' ? 'L' : (presEncontradaCat.tipo === 'kg' ? 'kg' : 'un');
             if (!catalogo.esPresentacionEquivalente(presEncontradaCat.valor, unidEnc, itemCat.cantidad, itemCat.unidad)) {
@@ -1405,7 +1511,7 @@ function _validarCoincidenciaBase(queryOriginal, resultado, intencion, nombreEnc
 
     // Validación de Presentación / Tamaño si se especificó (Tolerancia CERO a presentaciones distintas)
     if (intencion.presentacion) {
-        var presEncontrada = extraerPresentacion(nombreEncontrado);
+        var presEncontrada = extraerPresentacion(nombreParaValidar);
         if (presEncontrada) {
             if (presEncontrada.tipo !== intencion.presentacion.tipo || Math.abs(presEncontrada.valor - intencion.presentacion.valor) > 0.001) {
                 return {
@@ -1523,10 +1629,73 @@ function formatoMoneda(num) {
     return '$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function obtenerReferenciasImagen(itemId, supermercado) {
+    var evidence = cargarEvidenciaImagenes();
+    var refs = evidence.referencias[claveReferenciaImagen(itemId, supermercado)] || [];
+    return refs.map(function(ref) {
+        return normalizarUrlImagen(typeof ref === 'string' ? ref : ref && ref.url);
+    }).filter(Boolean);
+}
+
+function registrarEvidenciaImagen(query, itemResultado) {
+    if (!itemResultado) return null;
+    var imagenUrl = itemResultado.imagenUrl || itemResultado.imagen_url || itemResultado.imageUrl || itemResultado.image_url;
+    var imagenUrlNormalizada = normalizarUrlImagen(imagenUrl);
+
+    var evidenciaResultado = {
+        nombre: itemResultado.nombre || itemResultado.nombre_encontrado || '',
+        precio: itemResultado.precio,
+        precioStr: itemResultado.precioStr || itemResultado.precio || '',
+        supermercado: itemResultado.supermercado || '',
+        cantidad: itemResultado.cantidad,
+        unidad: itemResultado.unidad,
+        imagenUrl: imagenUrlNormalizada,
+        imagenAlt: itemResultado.imagenAlt || itemResultado.imagen_alt || '',
+        imagenTitle: itemResultado.imagenTitle || itemResultado.imagen_title || '',
+        stockRaw: itemResultado.stockRaw || itemResultado.stock_status || ''
+    };
+    var validacion = validarCoincidencia(query, evidenciaResultado);
+    var itemCatalogo = validacion && validacion.itemCatalogo ? validacion.itemCatalogo : resolverItemCatalogo(query, itemResultado);
+    var evidence = cargarEvidenciaImagenes();
+    var registro = {
+        imagenUrl: imagenUrlNormalizada,
+        imagenAlt: evidenciaResultado.imagenAlt,
+        imagenTitle: evidenciaResultado.imagenTitle
+    };
+    var key = claveResultadoImagen(itemResultado);
+    if (key.replace(/\|/g, '').trim()) evidence.resultados[key] = registro;
+
+    if (imagenUrlNormalizada && validacion && validacion.valido && itemCatalogo && itemCatalogo.id) {
+        var refKey = claveReferenciaImagen(itemCatalogo.id, itemResultado.supermercado);
+        var refs = evidence.referencias[refKey] || [];
+        var existing = refs.find(function(ref) { return normalizarUrlImagen(ref && (ref.url || ref)) === imagenUrlNormalizada; });
+        if (existing) {
+            existing.url = imagenUrlNormalizada;
+            existing.alt = registro.imagenAlt;
+            existing.title = registro.imagenTitle;
+            existing.actualizada = new Date().toISOString();
+        } else {
+            refs.push({
+                url: imagenUrlNormalizada,
+                alt: registro.imagenAlt,
+                title: registro.imagenTitle,
+                actualizada: new Date().toISOString()
+            });
+        }
+        evidence.referencias[refKey] = refs.slice(-12);
+    }
+
+    // Acota el sidecar para no acumular metadatos de cada corrida indefinidamente.
+    var resultKeys = Object.keys(evidence.resultados);
+    if (resultKeys.length > 1500) {
+        resultKeys.slice(0, resultKeys.length - 1500).forEach(function(oldKey) { delete evidence.resultados[oldKey]; });
+    }
+    guardarEvidenciaImagenes(evidence);
+    return validacion;
+}
+
 // Lee resultados.csv reconociendo formatos de 8 o 5 columnas
 function leerResultadosCSV(filePath) {
-    const fs = require('fs');
-    const path = require('path');
     var csvFile = filePath || path.join(__dirname, 'resultados.csv');
     if (!fs.existsSync(csvFile)) return [];
 
@@ -1584,6 +1753,17 @@ function leerResultadosCSV(filePath) {
                 stockRaw: 'DISPONIBLE'
             });
         }
+    }
+    if (path.resolve(csvFile) === path.join(__dirname, 'resultados.csv')) {
+        var metadataImagenes = cargarEvidenciaImagenes().resultados;
+        items.forEach(function(item) {
+            var metadata = metadataImagenes[claveResultadoImagen(item)];
+            if (metadata) {
+                item.imagenUrl = metadata.imagenUrl || '';
+                item.imagenAlt = metadata.imagenAlt || '';
+                item.imagenTitle = metadata.imagenTitle || '';
+            }
+        });
     }
     return items;
 }
@@ -2005,6 +2185,18 @@ if (require.main === module) {
         var t33j = validarCoincidencia('Papel Higiénico Higienol', { nombre: 'Papel higiénico Higienol Max hoja simple 100 mts 4 uni', precio: 7680 });
         assertEq('Catálogo: Aceptación Higienol Max para búsqueda Higienol', t33j.estado, 'VALIDADA');
 
+        // Test 33k: ACEPTACIÓN de pluralización común del título de tienda (Oreo -> Oreos)
+        var t33k = validarCoincidencia('Galletitas Oreo 118 g', { nombre: 'Galletitas Oreos rellenas con crema sabor original 118 g', precio: 1700 });
+        assertEq('Título variable: Aceptación de marca pluralizada Oreo', t33k.estado, 'VALIDADA');
+
+        // Test 33l: RECHAZO de la misma marca con presentación distinta
+        var t33l = validarCoincidencia('Galletitas Oreo 118 g', { nombre: 'Galletitas Oreos rellenas con crema 300 g', precio: 3200 });
+        assertEq('Título variable: Oreo plural no habilita una presentación distinta', t33l.estado, 'COINCIDENCIA NO VÁLIDA');
+
+        // Test 33m: ACEPTACIÓN de singular/plural en la variante si se conserva la misma presentación
+        var t33m = validarCoincidencia('Galletitas Oreo Original 118 g', { nombre: 'Galletitas Oreos Rellenas con Crema Originales 118 g', precio: 1700 });
+        assertEq('Título variable: Aceptación de marca y variante pluralizadas', t33m.estado, 'VALIDADA');
+
         // Test 34: Comparación de 3 Supermercados (Incompleto en Día %)
         var itemsTestIncompleto = [
             { supermercado: 'Carrefour', valido: true, precio: 1500, stock_status: 'DISPONIBLE', nombre: 'Manaos Cola 2.25 L' },
@@ -2069,44 +2261,16 @@ if (require.main === module) {
     }
 }
 
-// Cierra exclusivamente las ventanas y procesos abiertos por TagUI (puerto 9222 y perfil tagui)
-// de modo que NUNCA afecte al frontend (http://localhost:3000) ni al navegador personal del usuario.
+// Cierra exclusivamente Chrome iniciado con el perfil dedicado de TagUI.
+// No termina procesos Chrome del usuario ni el navegador del frontend.
 function cerrarNavegadorTagUI() {
     try {
-        const http = require('http');
-        const req = http.get('http://127.0.0.1:9222/json', (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const tabs = JSON.parse(data);
-                    if (Array.isArray(tabs)) {
-                        for (const tab of tabs) {
-                            if (tab && tab.id) {
-                                http.get(`http://127.0.0.1:9222/json/close/${tab.id}`, () => {}).on('error', () => {});
-                            }
-                        }
-                    }
-                } catch(e) {}
-            });
-        });
-        req.on('error', () => {});
-        req.setTimeout(800, () => req.destroy());
-    } catch(e) {}
-
-    try {
         const { spawnSync } = require('child_process');
-        const res = spawnSync('powershell', [
+        spawnSync('powershell', [
             '-NoProfile',
             '-Command',
-            "(Get-CimInstance Win32_Process -Filter \"CommandLine LIKE '%tagui%'\").ProcessId"
-        ]);
-        const pids = res.stdout.toString().split(/\r?\n/).map(s => s.trim()).filter(s => /^\d+$/.test(s));
-        for (const pid of pids) {
-            try {
-                process.kill(parseInt(pid, 10), 'SIGKILL');
-            } catch (eKill) {}
-        }
+            "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -match 'tagui_user_profile' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId | Out-Null }"
+        ], { windowsHide: true, timeout: 5000, stdio: 'ignore' });
     } catch (e) {}
 }
 
@@ -2149,6 +2313,9 @@ module.exports = {
     buscarPorDiccionarioSupermercado: catalogo.buscarPorDiccionarioSupermercado,
     agregarNombreSupermercado: catalogo.agregarNombreSupermercado,
     validarCoincidencia: validarCoincidencia,
+    normalizarUrlImagen: normalizarUrlImagen,
+    obtenerReferenciasImagen: obtenerReferenciasImagen,
+    registrarEvidenciaImagen: registrarEvidenciaImagen,
     validarComparacion3Supermercados: validarComparacion3Supermercados,
     catalogo: catalogo,
     parsePrecio: parsePrecio,

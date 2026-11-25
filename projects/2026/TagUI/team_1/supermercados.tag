@@ -41,6 +41,10 @@ js else if ((pLow.indexOf('manaos') > -1 && pLow.indexOf('naranja') > -1) || (qL
 js else if ((pLow.indexOf('manaos') > -1 && (pLow.indexOf('lima') > -1 || pLow.indexOf('limon') > -1)) || (qLow.indexOf('manaos') > -1 && (qLow.indexOf('lima') > -1 || qLow.indexOf('limon') > -1))) { query_term = 'manaos lima limon'; }
 js else if ((pLow.indexOf('manaos') > -1 && pLow.indexOf('cola') > -1) || (qLow.indexOf('manaos') > -1 && qLow.indexOf('cola') > -1)) { query_term = 'manaos cola'; }
 
+js var evidenciaImagenValidator = require('./validador.js'); var evidenciaImagenCatalogo = require('./catalogo.js'); var itemImagenCatalogo = evidenciaImagenCatalogo.buscarEnCatalogo({producto: prod_clean, cantidad: cant_actual, unidad: unid_actual}) || evidenciaImagenCatalogo.buscarEnCatalogo(prod_clean); var nombreCatalogoImagen = JSON.stringify(itemImagenCatalogo ? (itemImagenCatalogo.nombre_completo || '') : '');
+js refsImagenCarrefour = JSON.stringify(itemImagenCatalogo ? evidenciaImagenValidator.obtenerReferenciasImagen(itemImagenCatalogo.id, 'Carrefour') : []);
+js refsImagenCoto = JSON.stringify(itemImagenCatalogo ? evidenciaImagenValidator.obtenerReferenciasImagen(itemImagenCatalogo.id, 'COTO') : []);
+js refsImagenDia = JSON.stringify(itemImagenCatalogo ? evidenciaImagenValidator.obtenerReferenciasImagen(itemImagenCatalogo.id, 'Día %') : []);
 js prod_url = encodeURIComponent(query_term.replace(/,/g, ' ').replace(/\s+/g, ' '));
 
 
@@ -79,6 +83,10 @@ function cleanText(s) {
     if (!s) return '';
     return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\.,;:!¡?¿\(\)\[\]"'\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
 }
+function canonicalImageUrl(raw) { if (!raw) return ''; try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); } catch(e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); } }
+function imageUrlText(raw) { try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; } catch(e) { return ''; } }
+var trustedImages = `refsImagenCarrefour`;
+var catalogProductName = `nombreCatalogoImagen`;
 
 var qStr = cleanText("`producto`");
 var qWords = qStr.split(/\s+/).filter(function(w){ return w.length >= 2; });
@@ -97,9 +105,14 @@ for (var i = 0; i < cards.length; i++) {
     var nEl = c.querySelector('[class*="productBrand"], [class*="product-summary-2-x-nameContainer"], [data-testid="product-summary-name"], [class*="productName"], h3, h2');
     var pEl = c.querySelector('[class*="sellingPrice"], [class*="currencyContainer"], [class*="price_sellingPrice"]');
     var lEl = c.querySelector('a[href*="/p"]') || c.querySelector('a');
-    if (!nEl) continue;
+    var imageEl = c.querySelector('img');
+    var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+    var imageAlt = imageEl ? (imageEl.alt || '') : '';
+    var imageTitle = imageEl ? (imageEl.title || '') : '';
+    if (!nEl && !imageAlt && !imageTitle) continue;
 
-    var nameVal = nEl.innerText.trim();
+    var nameVal = nEl ? nEl.innerText.trim() : '';
+    if (!nameVal) nameVal = imageAlt || imageTitle;
     if (!nameVal) continue;
     var priceVal = pEl ? pEl.innerText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : 'N/D';
     var urlVal = lEl ? lEl.href : window.location.href;
@@ -108,7 +121,8 @@ for (var i = 0; i < cards.length; i++) {
     var unavail = (c.querySelector('[class*="unavailable"], [class*="outOfStock"]') !== null) || cardText.indexOf('agotado') > -1 || cardText.indexOf('sin stock') > -1;
     if (priceVal === 'N/D' || priceVal === '' || priceVal === '$ 0' || priceVal === '$ 0,00') unavail = true;
 
-    var nClean = cleanText(nameVal);
+    var imageRefMatch = trustedImages.indexOf(canonicalImageUrl(imageUrl)) > -1;
+    var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? catalogProductName : ''].filter(Boolean).join(' '));
 
     var tieneInc = false;
     for (var k = 0; k < incompatibles.length; k++) {
@@ -175,6 +189,9 @@ for (var i = 0; i < cards.length; i++) {
         price: priceVal,
         url: urlVal,
         stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+        imageUrl: canonicalImageUrl(imageUrl),
+        imageAlt: imageAlt,
+        imageTitle: imageTitle,
         score: score
     });
 }
@@ -185,10 +202,11 @@ return JSON.stringify(candidates[0]);
 dom finish
 
 js var cData = null; try { cData = JSON.parse(dom_result); } catch(e){}
-js if (cData) { carrefour_nom = cData.name; carrefour_pre = cData.price; carrefour_url = cData.url; carrefour_stock = cData.stock; }
+js var carrefour_imagen_url = ''; var carrefour_imagen_alt = ''; var carrefour_imagen_title = ''; if (cData) { carrefour_nom = cData.name; carrefour_pre = cData.price; carrefour_url = cData.url; carrefour_stock = cData.stock; carrefour_imagen_url = cData.imageUrl || ''; carrefour_imagen_alt = cData.imageAlt || ''; carrefour_imagen_title = cData.imageTitle || ''; }
 echo [SUPERMERCADO 1] Extraído: `carrefour_nom` | `carrefour_pre` | `carrefour_stock`
 echo [SUPERMERCADO 1] Finalizado.
 write `csv_row([modo_actual, producto, carrefour_nom, carrefour_pre, "Carrefour", carrefour_url, fechaHoy, carrefour_stock, cant_actual, unid_actual])` to resultados.csv
+js evidenciaImagenValidator.registrarEvidenciaImagen(prod_clean, {modo: modo_actual, producto: prod_clean, nombre_encontrado: carrefour_nom, precio: carrefour_pre, supermercado: 'Carrefour', url: carrefour_url, fecha: fechaHoy, stock_status: carrefour_stock, cantidad: cant_actual, unidad: unid_actual, imagen_url: carrefour_imagen_url, imagen_alt: carrefour_imagen_alt, imagen_title: carrefour_imagen_title});
 
 
 // ==============================================================================
@@ -220,6 +238,11 @@ function cleanText(s) {
 var qStr = cleanText("`producto`");
 var qWords = qStr.split(/\s+/).filter(function(w){ return w.length >= 2; });
 
+function canonicalImageUrl(raw) { if (!raw) return ''; try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); } catch(e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); } }
+function imageUrlText(raw) { try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; } catch(e) { return ''; } }
+var trustedImages = `refsImagenCoto`;
+var catalogProductName = `nombreCatalogoImagen`;
+
 var items = Array.from(document.querySelectorAll('constructor-result-item, .product-card, article')).slice(0, 15);
 if (items.length === 0) return 'null';
 
@@ -231,9 +254,14 @@ for (var i = 0; i < items.length; i++) {
     var nEl = it.querySelector('.nombre-producto, h3, h2');
     var pEl = it.querySelector('.card-title, h4, [class*="price"]');
     var lEl = it.querySelector('a');
-    if (!nEl) continue;
+    var imageEl = it.querySelector('img');
+    var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+    var imageAlt = imageEl ? (imageEl.alt || '') : '';
+    var imageTitle = imageEl ? (imageEl.title || '') : '';
+    if (!nEl && !imageAlt && !imageTitle) continue;
 
-    var nameVal = nEl.innerText.trim();
+    var nameVal = nEl ? nEl.innerText.trim() : '';
+    if (!nameVal) nameVal = imageAlt || imageTitle;
     if (!nameVal) continue;
     var priceVal = pEl ? pEl.innerText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : 'N/D';
     var urlVal = lEl ? lEl.href : window.location.href;
@@ -242,7 +270,8 @@ for (var i = 0; i < items.length; i++) {
     var unavail = itText.indexOf('sin stock') > -1 || itText.indexOf('agotado') > -1 || itText.indexOf('no disponible') > -1;
     if (priceVal === 'N/D' || priceVal === '' || priceVal === '$0' || priceVal === '$0,00') unavail = true;
 
-    var nClean = cleanText(nameVal);
+    var imageRefMatch = trustedImages.indexOf(canonicalImageUrl(imageUrl)) > -1;
+    var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? catalogProductName : ''].filter(Boolean).join(' '));
 
     var tieneInc = false;
     for (var k = 0; k < incompatibles.length; k++) {
@@ -309,6 +338,9 @@ for (var i = 0; i < items.length; i++) {
         price: priceVal,
         url: urlVal,
         stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+        imageUrl: canonicalImageUrl(imageUrl),
+        imageAlt: imageAlt,
+        imageTitle: imageTitle,
         score: score
     });
 }
@@ -319,10 +351,11 @@ return JSON.stringify(candidates[0]);
 dom finish
 
 js var ctData = null; try { ctData = JSON.parse(dom_result); } catch(e){}
-js if (ctData) { coto_nom = ctData.name; coto_pre = ctData.price; coto_url = ctData.url; coto_stock = ctData.stock; }
+js var coto_imagen_url = ''; var coto_imagen_alt = ''; var coto_imagen_title = ''; if (ctData) { coto_nom = ctData.name; coto_pre = ctData.price; coto_url = ctData.url; coto_stock = ctData.stock; coto_imagen_url = ctData.imageUrl || ''; coto_imagen_alt = ctData.imageAlt || ''; coto_imagen_title = ctData.imageTitle || ''; }
 echo [SUPERMERCADO 2] Extraído: `coto_nom` | `coto_pre` | `coto_stock`
 echo [SUPERMERCADO 2] Finalizado.
 write `csv_row([modo_actual, producto, coto_nom, coto_pre, "COTO", coto_url, fechaHoy, coto_stock, cant_actual, unid_actual])` to resultados.csv
+js evidenciaImagenValidator.registrarEvidenciaImagen(prod_clean, {modo: modo_actual, producto: prod_clean, nombre_encontrado: coto_nom, precio: coto_pre, supermercado: 'COTO', url: coto_url, fecha: fechaHoy, stock_status: coto_stock, cantidad: cant_actual, unidad: unid_actual, imagen_url: coto_imagen_url, imagen_alt: coto_imagen_alt, imagen_title: coto_imagen_title});
 
 
 // ==============================================================================
@@ -378,6 +411,11 @@ function cleanText(s) {
 var qStr = cleanText("`producto`");
 var qWords = qStr.split(/\s+/).filter(function(w){ return w.length >= 2; });
 
+function canonicalImageUrl(raw) { if (!raw) return ''; try { var u = new URL(raw, window.location.href); return (u.origin + u.pathname).replace(/\/$/, ''); } catch(e) { return String(raw).split(/[?#]/)[0].replace(/\/$/, ''); } }
+function imageUrlText(raw) { try { var s = decodeURIComponent(new URL(raw, window.location.href).pathname.split('/').pop() || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[\-_+]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]{3,}/i.test(s) ? s : ''; } catch(e) { return ''; } }
+var trustedImages = `refsImagenDia`;
+var catalogProductName = `nombreCatalogoImagen`;
+
 var dCards = Array.from(document.querySelectorAll('[class*="galleryItem"]'));
 if (dCards.length === 0) dCards = Array.from(document.querySelectorAll('article'));
 if (dCards.length === 0) dCards = Array.from(document.querySelectorAll('section[class*="product-summary"]'));
@@ -391,9 +429,14 @@ for (var i = 0; i < dCards.length; i++) {
     var nEl = c.querySelector('h3, [class*="productBrand"]');
     var pEl = c.querySelector('[class*="sellingPriceValue"], [class*="sellingPrice"], [class*="price_sellingPrice"], [class*="currencyContainer"]');
     var lEl = c.querySelector('a[href*="/p"]') || c.querySelector('a');
-    if (!nEl) continue;
+    var imageEl = c.querySelector('img');
+    var imageUrl = imageEl ? (imageEl.currentSrc || imageEl.src || imageEl.getAttribute('data-src') || '') : '';
+    var imageAlt = imageEl ? (imageEl.alt || '') : '';
+    var imageTitle = imageEl ? (imageEl.title || '') : '';
+    if (!nEl && !imageAlt && !imageTitle) continue;
 
-    var nameVal = nEl.innerText.trim();
+    var nameVal = nEl ? nEl.innerText.trim() : '';
+    if (!nameVal) nameVal = imageAlt || imageTitle;
     if (!nameVal) continue;
     var priceVal = 'N/D';
     if (pEl) {
@@ -410,7 +453,8 @@ for (var i = 0; i < dCards.length; i++) {
     var unavail = cardText.indexOf('agotado') > -1 || cardText.indexOf('sin stock') > -1 || cardText.indexOf('no disponible') > -1;
     if (priceVal === 'N/D' || priceVal === '' || priceVal === '$ 0' || priceVal === '$ 0,00') unavail = true;
 
-    var nClean = cleanText(nameVal);
+    var imageRefMatch = trustedImages.indexOf(canonicalImageUrl(imageUrl)) > -1;
+    var nClean = cleanText([nameVal, imageAlt, imageTitle, imageUrlText(imageUrl), imageRefMatch ? catalogProductName : ''].filter(Boolean).join(' '));
 
     var tieneInc = false;
     for (var k = 0; k < incompatibles.length; k++) {
@@ -477,6 +521,9 @@ for (var i = 0; i < dCards.length; i++) {
         price: priceVal,
         url: urlVal,
         stock: unavail ? 'SIN STOCK' : 'DISPONIBLE',
+        imageUrl: canonicalImageUrl(imageUrl),
+        imageAlt: imageAlt,
+        imageTitle: imageTitle,
         score: score
     });
 }
@@ -487,10 +534,11 @@ return JSON.stringify(candidates[0]);
 dom finish
 
 js var dData = null; try { dData = JSON.parse(dom_result); } catch(e){}
-js if (dData) { dia_nom = dData.name; dia_pre = dData.price; dia_url = dData.url; dia_stock = dData.stock; }
+js var dia_imagen_url = ''; var dia_imagen_alt = ''; var dia_imagen_title = ''; if (dData) { dia_nom = dData.name; dia_pre = dData.price; dia_url = dData.url; dia_stock = dData.stock; dia_imagen_url = dData.imageUrl || ''; dia_imagen_alt = dData.imageAlt || ''; dia_imagen_title = dData.imageTitle || ''; }
 echo [SUPERMERCADO 3] Extraído: `dia_nom` | `dia_pre` | `dia_stock`
 echo [SUPERMERCADO 3] Finalizado.
 write `csv_row([modo_actual, producto, dia_nom, dia_pre, "Día %", dia_url, fechaHoy, dia_stock, cant_actual, unid_actual])` to resultados.csv
+js evidenciaImagenValidator.registrarEvidenciaImagen(prod_clean, {modo: modo_actual, producto: prod_clean, nombre_encontrado: dia_nom, precio: dia_pre, supermercado: 'Día %', url: dia_url, fecha: fechaHoy, stock_status: dia_stock, cantidad: cant_actual, unidad: unid_actual, imagen_url: dia_imagen_url, imagen_alt: dia_imagen_alt, imagen_title: dia_imagen_title});
 
 echo ----------------------------------------------------------------------------
 echo [ RPA FINALIZADO ]
